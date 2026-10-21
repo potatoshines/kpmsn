@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Member Service Navigator (Prototype)</title>
+    <link
+      rel="stylesheet"
+      href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600&family=Fraunces:opsz,wght@9..144,500;9..144,600&display=swap"
+    />
+    <link rel="stylesheet" href="src/styles/base.css" />
+    <link rel="stylesheet" href="src/styles/theme.css" />
+  </head>
+  <body>
+    <header>
+      <h1>Member Service Navigator</h1>
+      <nav aria-label="Pages">
+        <button data-v="ws" aria-current="page">Representative workspace</button
+        ><button data-v="pf">Member profile</button
+        ><button data-v="mb">Member follow-up chat</button>
+      </nav>
+      <div
+        class="notice"
+        role="note"
+        title="All member profiles, medical records, billing, appointments and call transcripts are fictional. Not connected to live Kaiser Permanente systems. Analysis and recommendations are simulated."
+      >
+        Prototype · fictional data
+      </div>
+    </header>
+    <main>
+      <section id="ws">
+        <p class="eb">Overview / Active call</p>
+        <div class="pt">Representative workspace</div>
+        <p class="ps">Member, call and suggested resources in one view.</p>
+        <div class="card">
+          <h2>Member lookup</h2>
+          <div class="row">
+            <label>Member ID <input id="qid" placeholder="KP-100234" size="10" /></label
+            ><label>Name <input id="qn" placeholder="Maria Alvarez" /></label
+            ><label>Date of birth <input id="qd" type="date" /></label
+            ><button class="p" id="find">Find member</button>
+          </div>
+          <p class="mut" id="lmsg" role="alert">Search by member ID, name or date of birth.</p>
+          <div id="mock"></div>
+        </div>
+        <div class="card hide" id="sum"></div>
+        <div class="grid">
+          <div>
+            <div class="card">
+              <h2>Call transcript</h2>
+              <div class="row">
+                <button class="p" id="play">▶ Play</button><button id="step">Step</button
+                ><button id="rst">Reset</button>
+                <label
+                  >Sample file
+                  <select id="samp"></select></label
+                ><label>or load .txt <input type="file" id="file" accept=".txt" /></label>
+              </div>
+              <p class="mut">
+                Text files: one line per turn, as “Rep: …” or “Member: …”. Loaded text is analyzed
+                by the same keyword rules (simulated).
+              </p>
+              <p class="err" id="ferr" role="alert"></p>
+              <div id="tr" aria-live="polite" tabindex="0">
+                <span class="mut">No transcript yet. Look up a member, then press Play.</span>
+              </div>
+            </div>
+            <div class="card">
+              <h2>Detected concerns</h2>
+              <div id="conc" class="mut">None yet.</div>
+              <h2 style="margin-top: 10px">
+                Recorded concern history <span class="tag g">Recorded</span>
+              </h2>
+              <div id="hist" class="mut">Look up a member.</div>
+            </div>
+            <div class="card">
+              <h2>Representative assistant <span class="tag">Simulated AI</span></h2>
+              <div class="row" id="presets"></div>
+              <div class="chat" id="ac" aria-live="polite"></div>
+              <div class="row">
+                <input
+                  id="ai"
+                  aria-label="Ask the assistant"
+                  placeholder="Ask about this member or call"
+                  size="28"
+                /><button id="ask">Ask</button>
+              </div>
+            </div>
+          </div>
+          <div>
+            <div class="card">
+              <h2>Suggested benefits and resources</h2>
+              <p class="mut">
+                Suggestions are not confirmed benefits. Verify before sharing as applicable.
+              </p>
+              <div id="sugs"><p class="mut">Suggestions appear as the transcript plays.</p></div>
+            </div>
+            <div class="card">
+              <h2>Pending follow-up</h2>
+              <div id="pend" class="mut">Nothing selected.</div>
+              <div class="row" style="margin-top: 8px">
+                <button id="prev" disabled>Preview</button
+                ><button class="p" id="send" disabled>Review and send</button>
+              </div>
+              <div id="prevbox" class="mut" style="margin-top: 8px"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="pf" class="hide"></section>
+
+      <section id="mb" class="hide">
+        <p class="eb">Member view</p>
+        <div class="pt">Follow-up</div>
+        <p class="ps">What the representative shared after the call.</p>
+        <div class="phone card">
+          <h2>Follow-up chat <span class="tag">Simulated text message</span></h2>
+          <p class="mut">
+            This temporary chat only shows items your representative approved, and the assistant
+            forgets this member’s information and call transcript after about 3 hours.
+          </p>
+          <div class="chat" id="mc" aria-live="polite">
+            <p class="mut">No follow-up sent yet. Representatives send it from the workspace.</p>
+          </div>
+          <div class="row" id="mqs"></div>
+          <div class="row">
+            <input
+              id="mi"
+              aria-label="Ask a follow-up question"
+              placeholder="Ask about what was shared"
+              size="26"
+            /><button id="mask">Send</button>
+          </div>
+        </div>
+      </section>
+    </main>
+    <script type="module" src="src/app.js"></script>
+  </body>
+</html>

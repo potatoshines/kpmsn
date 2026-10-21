@@ -1,0 +1,15 @@
+{
+  "name": "kp-member-service-navigator",
+  "version": "0.1.0",
+  "description": "Prototype call-support dashboard and member follow-up chat (fictional data, simulated analysis)",
+  "type": "module",
+  "private": true,
+  "license": "MIT",
+  "scripts": {
+    "start": "npx serve . -l 5173",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "prettier": "^3.3.0"
+  }
+}
