@@ -1,4 +1,10 @@
-# Member Service Navigator
+# KP Member Service Navigator
+
+A UC Berkeley Fung Fellowship Project | Fall 2026
+
+Developed by *The A Team*: Shin Aung, Aditya Sudarshan, Ash Htet, and Ayumi Hermosillo.
+
+Industry Partner: Kaiser Permanente
 
 A prototype call-support dashboard for health-plan customer-service representatives, paired with a text-style follow-up chat for members. A representative looks up a member, follows a call transcript as it plays, reviews suggested resources, and sends only the items they approve to the member.
 
