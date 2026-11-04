@@ -48,7 +48,7 @@ function find() {
     .join("");
   $("#sum").classList.remove("hide");
   $("#sum").innerHTML =
-    `<h2>${r.name} <span class="tag g">Recorded</span></h2><div class="row mut"><span>ID ${r.id}</span><span>Plan: ${r.plan}</span><span>PCP: ${r.pcp}</span><span>Language: ${r.lang}</span><span>Phone: ${r.ph}</span>${r.due ? `<span class="tag v">⚠ Amount due $${r.due.toFixed(2)} by ${r.dd}</span>` : ""}</div>`;
+    `<h2>${r.name} <span class="tag g">Recorded</span></h2><div class="row mut"><span>ID ${r.id}</span><span>Plan: ${r.plan}</span><span>PCP: ${r.pcp}</span><span>Language: ${r.lang}</span>${r.due ? `<span class="tag v">⚠ Amount due $${r.due.toFixed(2)} by ${r.dd}</span>` : ""}</div>`;
   $("#hist").innerHTML = r.hist
     .map((h) => {
       const t = h.slice(11),
@@ -385,14 +385,10 @@ function prof() {
       .map((w) => w[0])
       .join("")}</i><div><b>${m.name}</b><span>${m.id} · ${m.plan}</span></div></section><div>` +
     t(
-      "Personal and contact",
-      `${m.name}<br>DOB ${m.dob}<br>${m.addr}<br>${m.ph}<br>Language: ${m.lang}`,
+      "Personal details",
+      `${m.name}<br>DOB ${m.dob}<br>Language: ${m.lang}`,
     ) +
     t("Membership and coverage", `ID ${m.id}<br>Plan: ${m.plan}<br>${m.cov}<br>PCP: ${m.pcp}`) +
-    t(
-      "Medications, allergies, conditions",
-      `Medications: ${m.meds}<br>Allergies: ${m.al}<br>Conditions: ${m.cond}`,
-    ) +
     t("Appointments and procedures", `Next: ${m.ap}<br>Procedures: ${m.sx}`) +
     `</div><div>` +
     t("Billing", m.due ? `Amount due: <b>$${m.due.toFixed(2)}</b> by ${m.dd}` : "No amount due.") +

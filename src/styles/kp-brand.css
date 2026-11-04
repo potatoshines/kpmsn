@@ -1,0 +1,681 @@
+/* KP brand layer. Loaded after theme.css. Cosmetic only: no selectors or ids that app.js depends on are changed.
+   Palette sampled from screenshots of kp.org. Typeface is a stand-in for KP's own font. */
+
+/* ---------- Tokens ---------- */
+:root {
+  --bg: #ffffff;
+  --card: #ffffff;
+  --tile: #f6f8fb;
+  --tx: #101c3b;
+  --mut: #5b6578;
+  --bd: #d5dae3;
+  --pri: #3172a8; /* action blue: buttons, selected states */
+  --lk: #1f5588; /* link and small text blue, 7:1 on white */
+  --pg: #e8f2f6; /* tint: chips, hover, avatar */
+  --pe: #e8f2f6;
+  --grn: #1b6b3a;
+  --gg: #e4f3e8;
+  --amb: #8a4b00;
+  --ag: #fff1dc;
+  --on-pri: #ffffff;
+  --util: #163a6d; /* utility strip */
+  --nav: #101c3b; /* header band */
+  --alert: #faf5f4;
+  --g: max(16px, calc((100vw - 1240px) / 2));
+  --font:
+    Montserrat, "Gotham", "Proxima Nova", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0a1426;
+    --card: #111f38;
+    --tile: #0e1a30;
+    --tx: #eaf0fa;
+    --mut: #a9b7d0;
+    --bd: #26375a;
+    --pri: #5fb6e6;
+    --lk: #8ccbf0;
+    --pg: #12304a;
+    --pe: #12304a;
+    --grn: #7ddb9c;
+    --gg: #12301e;
+    --amb: #f2b866;
+    --ag: #3a2a0e;
+    --on-pri: #07213a;
+    --util: #0d2548;
+    --nav: #070f20;
+  }
+}
+
+/* ---------- Type ---------- */
+body,
+button,
+input,
+select {
+  font-family: var(--font);
+}
+body {
+  font-size: 15px;
+  line-height: 1.55;
+  color: var(--tx);
+}
+.pt,
+h1,
+#sum h2,
+.sug b,
+#sum::before,
+#pf .ph i {
+  font-family: var(--font);
+}
+a {
+  color: var(--lk);
+}
+.eb {
+  font-size: 12px;
+  letter-spacing: 0;
+  text-transform: none;
+  font-weight: 500;
+  color: var(--mut);
+  margin: 4px 0 8px;
+}
+.pt {
+  font-size: 28px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: var(--tx);
+  margin: 0 0 6px;
+}
+.ps {
+  font-size: 15px;
+  margin: 0 0 22px;
+}
+h2,
+.card > h2:first-child {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--tx);
+}
+.mut {
+  font-size: 13px;
+}
+
+/* ---------- Page frame: utility strip, navy header, top nav ---------- */
+body {
+  display: block;
+  min-height: 0;
+  background: var(--bg);
+}
+header {
+  position: static;
+  height: auto;
+  width: auto;
+  overflow: visible;
+  grid-column: auto;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: end;
+  gap: 4px 40px;
+  padding: 0 var(--g);
+  background: var(--nav);
+  color: #fff;
+  border: 0;
+}
+header .notice {
+  grid-column: 1 / -1;
+  order: -1;
+  display: flex;
+  align-items: center;
+  min-height: 40px;
+  margin: 0 calc(-1 * var(--g));
+  padding: 0 var(--g);
+  background: var(--util);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 1;
+  border: 0;
+  cursor: help;
+  letter-spacing: 0;
+}
+header .notice::before {
+  display: none;
+}
+header h1 {
+  font-size: 20px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: #fff;
+  line-height: 1.2;
+  padding: 20px 0 14px;
+}
+header h1::before {
+  content: "KAISER PERMANENTE";
+  display: block;
+  width: auto;
+  height: auto;
+  margin: 0 0 4px;
+  background: none;
+  border-radius: 0;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: #9db6d8;
+  justify-content: flex-start;
+}
+header nav {
+  flex-direction: row;
+  flex-wrap: wrap;
+  gap: 4px 28px;
+  align-self: end;
+}
+header nav button,
+header nav button[data-v] {
+  width: auto;
+  margin: 0;
+  padding: 12px 2px 10px;
+  background: transparent;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  border-radius: 0;
+  box-shadow: none;
+  color: #fff;
+  font-size: 13px;
+  font-weight: 700;
+  min-height: 44px;
+}
+header nav button[data-v]::before {
+  display: none;
+}
+header nav button:hover:not(:disabled) {
+  background: transparent;
+  color: #fff;
+  border-bottom-color: #5d86b8;
+  filter: none;
+}
+header nav button[data-v][aria-current="page"] {
+  background: transparent;
+  color: #fff;
+  border-left: 0;
+  border-bottom-color: #9cc3dc;
+  box-shadow: none;
+}
+header :focus-visible {
+  outline: 3px solid #9cc3dc;
+  outline-offset: 2px;
+}
+main {
+  grid-column: auto;
+  width: auto;
+  max-width: none;
+  margin: 0;
+  padding: 24px var(--g) 72px;
+}
+
+/* ---------- Cards ---------- */
+.card {
+  background: var(--card);
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+  box-shadow: none;
+  padding: 20px;
+  margin-bottom: 16px;
+}
+.card > h2:first-child {
+  border: 0;
+  padding: 0;
+  margin: 0 0 12px;
+}
+
+/* ---------- Buttons, inputs ---------- */
+button,
+input,
+select {
+  border-radius: 4px;
+}
+button {
+  min-height: 44px;
+  padding: 0 18px;
+  background: var(--card);
+  border: 1.5px solid var(--pri);
+  color: var(--lk);
+  font-weight: 600;
+  font-size: 13px;
+  border-radius: 999px;
+}
+button:hover:not(:disabled) {
+  background: var(--pg);
+  border-color: var(--pri);
+  color: var(--lk);
+  filter: none;
+}
+button.p {
+  background: var(--pri);
+  border-color: var(--pri);
+  color: var(--on-pri);
+  border-radius: 2px;
+}
+button.p:hover:not(:disabled) {
+  background: var(--pri);
+  color: var(--on-pri);
+  filter: brightness(0.9);
+}
+button:disabled {
+  opacity: 0.55;
+}
+button.ghost {
+  min-height: 32px;
+  padding: 0 10px;
+  border: 0;
+  background: transparent;
+  color: var(--lk);
+  text-decoration: underline;
+  border-radius: 4px;
+}
+button.ghost:hover:not(:disabled) {
+  background: var(--pg);
+  text-decoration: underline;
+}
+input,
+select {
+  min-height: 44px;
+  background: var(--card);
+  border: 1px solid var(--bd);
+  padding: 0 12px;
+  color: var(--tx);
+}
+input[type="file"] {
+  padding: 8px 12px;
+}
+label {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--tx);
+}
+:focus-visible {
+  outline: 3px solid var(--pri);
+  outline-offset: 2px;
+}
+
+/* ---------- Tags and highlights ---------- */
+.tag {
+  background: var(--pg);
+  color: var(--lk);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: none;
+  letter-spacing: 0;
+  padding: 2px 10px;
+}
+.tag.g {
+  background: var(--gg);
+  color: var(--grn);
+}
+.tag.v {
+  background: var(--ag);
+  color: var(--amb);
+}
+mark {
+  background: var(--pg);
+  color: var(--tx);
+  border: 0;
+  border-bottom: 2px solid var(--pri);
+  border-radius: 2px;
+  padding: 1px 4px;
+  font-weight: 600;
+}
+
+/* ---------- Member summary: stays in view while the call runs ---------- */
+#sum:not(.hide) {
+  position: sticky;
+  top: 0;
+  z-index: 3;
+  grid-template-columns: 48px minmax(0, 1fr);
+  column-gap: 16px;
+  padding: 12px 20px;
+  background: var(--card);
+  border: 1px solid var(--bd);
+  border-left: 4px solid var(--pri);
+  border-radius: 8px;
+}
+#sum::before {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: var(--pg);
+  color: var(--lk);
+  font-size: 16px;
+  font-weight: 700;
+}
+#sum h2 {
+  font-size: 18px;
+  margin: 0;
+  color: var(--tx);
+}
+#sum .row {
+  gap: 4px 16px;
+}
+
+/* ---------- Workspace: transcript left, suggestions right ---------- */
+#ws .grid {
+  grid-template-columns: minmax(0, 1fr) !important;
+}
+#ws .grid > div {
+  min-width: 0;
+}
+.row input,
+.row select {
+  max-width: 100%;
+}
+@media (min-width: 960px) {
+  #ws .grid {
+    grid-template-columns: minmax(0, 1.4fr) minmax(340px, 1fr) !important;
+    gap: 28px;
+    align-items: start;
+  }
+  #ws .grid > div {
+    display: block;
+    min-width: 0;
+  }
+  #ws .grid > div:last-child {
+    position: sticky;
+    top: 96px;
+    max-height: calc(100vh - 112px);
+    overflow: auto;
+    padding: 2px;
+  }
+}
+@media (max-width: 959px) {
+  #ws .grid > div {
+    display: block;
+  }
+}
+#tr {
+  max-height: 360px;
+  border-top: 1px solid var(--bd);
+}
+.ln {
+  background: none;
+  border: 0;
+  border-bottom: 1px solid var(--bd);
+  border-radius: 0;
+  margin: 0;
+  padding: 12px 4px;
+}
+.ln b {
+  color: var(--lk);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-size: 12px;
+}
+.ent {
+  grid-template-columns: 110px minmax(0, 1fr);
+}
+.ent b {
+  font-weight: 600;
+}
+
+/* ---------- Suggestions ---------- */
+#sugs {
+  grid-template-columns: 1fr;
+  gap: 12px;
+}
+.sug,
+.sug.sel {
+  border-radius: 8px;
+  margin: 0;
+  padding: 16px;
+}
+.sug {
+  background: var(--card);
+  border: 1px solid var(--bd);
+  border-left: 1px solid var(--bd);
+}
+.sug.sel {
+  background: var(--gg);
+  border: 2px solid var(--grn);
+  padding: 15px;
+}
+.sug > b {
+  font-size: 16px;
+  font-weight: 700;
+  color: var(--tx);
+}
+.sug p {
+  margin: 8px 0;
+  font-size: 14px;
+}
+.sug .row {
+  margin-top: 12px;
+}
+
+/* ---------- Chat ---------- */
+.b {
+  background: var(--pg);
+  color: var(--tx);
+  border-radius: 12px 12px 12px 2px;
+}
+.b.me {
+  background: var(--pri);
+  color: var(--on-pri);
+  border-radius: 12px 12px 2px 12px;
+}
+.chip {
+  background: var(--card);
+  border-radius: 999px;
+}
+.fl {
+  border-radius: 4px;
+}
+
+/* ---------- Tables, profile ---------- */
+th {
+  color: var(--mut);
+  letter-spacing: 0.06em;
+}
+#pf .grid {
+  background: var(--card);
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+}
+#pf .ph i {
+  background: var(--pg);
+  color: var(--lk);
+  border-radius: 50%;
+}
+.phone {
+  max-width: 480px;
+  margin: 0;
+}
+
+/* ---------- Narrow screens ---------- */
+@media (max-width: 760px) {
+  header {
+    grid-template-columns: 1fr;
+    gap: 0;
+  }
+  header h1 {
+    padding: 14px 0 6px;
+  }
+  header nav {
+    gap: 2px 18px;
+  }
+  main {
+    padding: 16px var(--g) 48px;
+  }
+  .pt {
+    font-size: 24px;
+  }
+  .ent {
+    grid-template-columns: 1fr;
+  }
+  #sum:not(.hide) {
+    position: static;
+  }
+}
+
+/* ---------- KP badge, footer ---------- */
+header h1 {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  column-gap: 12px;
+  align-items: center;
+}
+header h1::before {
+  grid-column: 2;
+  grid-row: 1;
+  margin: 0;
+}
+header h1 .logo {
+  grid-column: 1;
+  grid-row: 1 / 3;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: #fff;
+  color: #0057b8;
+  font-family: var(--font);
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+}
+header h1 .nm {
+  grid-column: 2;
+  grid-row: 2;
+}
+footer {
+  padding: 20px var(--g) 32px;
+  border-top: 1px solid var(--bd);
+  color: var(--mut);
+  font-family: var(--font);
+  font-size: 12px;
+}
+footer b {
+  display: inline-block;
+  padding: 2px 6px;
+  margin-right: 6px;
+  border-radius: 4px;
+  background: #0057b8;
+  color: #fff;
+}
+
+/* ---------- Colors and logo from kp.org ---------- */
+:root {
+  --nav: #0d1c3d;
+  --util: #003b71;
+  --pri: #0074ad;
+  --lk: #0074ad;
+  --pg: #f2f8fb;
+  --pe: #f2f8fb;
+}
+header h1 {
+  display: block;
+  padding: 18px 0 12px;
+}
+header h1::before {
+  display: none;
+}
+header h1 .logo {
+  display: block;
+  width: min(300px, 70vw);
+  height: auto;
+  margin: 0 0 6px;
+  border-radius: 0;
+  background: none;
+}
+header h1 .nm {
+  display: block;
+  font-size: 14px;
+  font-weight: 600;
+  color: #92ccf0;
+}
+footer b {
+  background: #003b71;
+}
+
+/* ---------- Gotham (self-hosted) ---------- */
+@font-face {
+  font-family: "Gotham";
+  src: url("../assets/fonts/Gotham-Book.otf") format("opentype");
+  font-weight: 400;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Gotham";
+  src: url("../assets/fonts/Gotham-Medium.otf") format("opentype");
+  font-weight: 500 600;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Gotham";
+  src: url("../assets/fonts/Gotham-Bold.ttf") format("truetype");
+  font-weight: 700;
+  font-display: swap;
+}
+:root {
+  --font:
+    "Gotham", Montserrat, "Proxima Nova", system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+}
+
+/* ---------- Header: logo left, nav tucked next to it (as on kp.org) ---------- */
+header {
+  column-gap: 24px;
+  align-items: center;
+}
+header h1 {
+  padding: 14px 0;
+}
+header h1 .logo {
+  width: min(220px, 60vw);
+  margin: 0;
+}
+header h1 .nm {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+header nav {
+  align-self: center;
+  justify-content: flex-start;
+  gap: 4px 20px;
+}
+
+/* ---------- Header: logo bar, then menu bar underneath (as on kp.org) ---------- */
+header {
+  grid-template-columns: minmax(0, 1fr);
+  row-gap: 0;
+  align-items: start;
+}
+header h1 {
+  padding: 18px 0 14px;
+}
+header h1 .logo {
+  width: min(300px, 70vw);
+}
+header nav {
+  align-self: start;
+  gap: 0 8px;
+  margin: 0 -16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.18);
+}
+header nav button,
+header nav button[data-v] {
+  padding: 14px 16px 11px;
+  font-size: 15px;
+  font-weight: 500;
+  border-bottom-color: transparent;
+}
+header nav button:hover:not(:disabled) {
+  border-bottom-color: #92ccf0;
+}
+header nav button[data-v][aria-current="page"] {
+  border-bottom-color: #92ccf0;
+}

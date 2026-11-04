@@ -1,3 +1,6 @@
 node_modules
 .DS_Store
 *.log
+
+# Licensed fonts: keep local
+src/assets/fonts/
