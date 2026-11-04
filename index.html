@@ -18,7 +18,13 @@
   </head>
   <body>
     <header>
-      <h1><img class="logo" src="src/assets/kp-logo-horizontal-white.svg" alt="Kaiser Permanente" /><span class="nm">Member Service Navigator</span></h1>
+      <h1>
+        <img
+          class="logo"
+          src="src/assets/kp-logo-horizontal-white.svg"
+          alt="Kaiser Permanente"
+        /><span class="nm">Member Service Navigator</span>
+      </h1>
       <nav aria-label="Pages">
         <button data-v="ws" aria-current="page">Representative workspace</button
         ><button data-v="pf">Member profile</button
@@ -49,66 +55,92 @@
           <div id="mock"></div>
         </div>
         <div class="card hide" id="sum"></div>
-        <div class="grid">
-          <div>
-            <div class="card">
-              <h2>Call transcript</h2>
-              <div class="row">
-                <button class="p" id="play">▶ Play</button><button id="step">Step</button
-                ><button id="rst">Reset</button>
-                <label
-                  >Sample file
-                  <select id="samp"></select></label
-                ><label>or load .txt <input type="file" id="file" accept=".txt" /></label>
-              </div>
-              <p class="mut">
-                Text files: one line per turn, as “Rep: …” or “Member: …”. Loaded text is analyzed
-                by the same keyword rules (simulated).
-              </p>
-              <p class="err" id="ferr" role="alert"></p>
-              <div id="tr" aria-live="polite" tabindex="0">
-                <span class="mut">No transcript yet. Look up a member, then press Play.</span>
-              </div>
-            </div>
-            <div class="card">
-              <h2>Detected concerns</h2>
-              <div id="conc" class="mut">None yet.</div>
-              <h2 style="margin-top: 10px">
-                Recorded concern history <span class="tag g">Recorded</span>
-              </h2>
-              <div id="hist" class="mut">Look up a member.</div>
-            </div>
-            <div class="card">
-              <h2>Representative assistant <span class="tag">Simulated AI</span></h2>
-              <div class="row" id="presets"></div>
-              <div class="chat" id="ac" aria-live="polite"></div>
-              <div class="row">
-                <input
-                  id="ai"
-                  aria-label="Ask the assistant"
-                  placeholder="Ask about this member or call"
-                  size="28"
-                /><button id="ask">Ask</button>
-              </div>
-            </div>
+        <div class="card">
+          <h2>Call transcript</h2>
+          <div class="row">
+            <button class="p" id="play">▶ Play</button><button id="step">Step</button
+            ><button id="rst">Reset</button>
+            <label
+              >Sample file
+              <select id="samp"></select></label
+            ><label>or load .txt <input type="file" id="file" accept=".txt" /></label>
           </div>
-          <div>
-            <div class="card">
-              <h2>Suggested benefits and resources</h2>
-              <p class="mut">
-                Suggestions are not confirmed benefits. Verify before sharing as applicable.
-              </p>
-              <div id="sugs"><p class="mut">Suggestions appear as the transcript plays.</p></div>
-            </div>
-            <div class="card">
-              <h2>Pending follow-up</h2>
-              <div id="pend" class="mut">Nothing selected.</div>
-              <div class="row" style="margin-top: 8px">
-                <button id="prev" disabled>Preview</button
-                ><button class="p" id="send" disabled>Review and send</button>
-              </div>
-              <div id="prevbox" class="mut" style="margin-top: 8px"></div>
-            </div>
+          <p class="mut">
+            Text files: one line per turn, as “Rep: …” or “Member: …”. Loaded text is analyzed by
+            the same keyword rules (simulated).
+          </p>
+          <p class="err" id="ferr" role="alert"></p>
+          <div id="tr" aria-live="polite" tabindex="0">
+            <span class="mut">No transcript yet. Look up a member, then press Play.</span>
+          </div>
+        </div>
+        <div class="card">
+          <h2>Detected concerns</h2>
+          <div id="conc" class="mut">None yet.</div>
+          <h2 style="margin-top: 10px">
+            Recorded concern history <span class="tag g">Recorded</span>
+          </h2>
+          <div id="hist" class="mut">Look up a member.</div>
+        </div>
+        <div class="card" id="sg">
+          <h2>Suggested benefits and resources</h2>
+          <p class="mut">
+            Suggestions are not confirmed benefits. Verify before sharing as applicable. Each card
+            is tagged with where the suggestion came from: the
+            <span class="tag">Call transcript</span> or the
+            <span class="tag pf">Member profile</span>.
+          </p>
+          <div class="filt" id="sgf" role="group" aria-label="Filter suggestions by source">
+            <button class="sm" data-flt="all" aria-pressed="true">
+              All <span class="n"></span></button
+            ><button class="sm" data-flt="tr" aria-pressed="false">
+              Call transcript <span class="n"></span></button
+            ><button class="sm" data-flt="pf" aria-pressed="false">
+              Member profile <span class="n"></span>
+            </button>
+          </div>
+          <div id="sugs"><p class="mut">Look up a member to see suggestions.</p></div>
+        </div>
+        <div class="card">
+          <h2>Pending follow-up</h2>
+          <div id="pend" class="mut">Nothing selected.</div>
+          <div class="row" style="margin-top: 8px">
+            <button id="prev" disabled>Preview</button
+            ><button id="rv" disabled aria-expanded="false" aria-controls="rev">
+              Review
+              <svg class="chev" width="12" height="12" viewBox="0 0 12 12" aria-hidden="true">
+                <path
+                  d="M2 4l4 4 4-4"
+                  fill="none"
+                  stroke="currentColor"
+                  stroke-width="1.8"
+                  stroke-linecap="round"
+                  stroke-linejoin="round"
+                />
+              </svg></button
+            ><button class="p" id="send" disabled>Send</button>
+          </div>
+          <div id="prevbox" class="mut" style="margin-top: 8px"></div>
+          <div
+            id="rev"
+            class="rev hide"
+            role="dialog"
+            aria-modal="false"
+            aria-label="Review and edit follow-up"
+            tabindex="-1"
+          ></div>
+        </div>
+        <div class="card">
+          <h2>Representative assistant <span class="tag">Simulated AI</span></h2>
+          <div class="row" id="presets"></div>
+          <div class="chat" id="ac" aria-live="polite"></div>
+          <div class="row">
+            <input
+              id="ai"
+              aria-label="Ask the assistant"
+              placeholder="Ask about this member or call"
+              size="28"
+            /><button id="ask">Ask</button>
           </div>
         </div>
       </section>
@@ -128,18 +160,24 @@
           <div class="chat" id="mc" aria-live="polite">
             <p class="mut">No follow-up sent yet. Representatives send it from the workspace.</p>
           </div>
+          <p class="mut">Tap a question to ask about what was shared.</p>
           <div class="row" id="mqs"></div>
-          <div class="row">
-            <input
-              id="mi"
-              aria-label="Ask a follow-up question"
-              placeholder="Ask about what was shared"
-              size="26"
-            /><button id="mask">Send</button>
-          </div>
         </div>
       </section>
     </main>
+    <dialog id="pvd" aria-labelledby="pvt">
+      <div class="pvin">
+        <div class="pvh">
+          <h2 id="pvt">Preview: what the member will see</h2>
+          <button id="pvx" class="ghost" aria-label="Close preview">Close ✕</button>
+        </div>
+        <p class="mut">Temporary preview. Nothing has been sent.</p>
+        <div class="phone card">
+          <h2>Follow-up chat <span class="tag">Simulated text message</span></h2>
+          <div class="chat" id="pvc"></div>
+        </div>
+      </div>
+    </dialog>
     <footer>
       <b>KP</b> Member Service Navigator · Prototype with fictional data · Not affiliated with or
       connected to Kaiser Permanente.

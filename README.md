@@ -2,7 +2,7 @@
 
 A UC Berkeley Fung Fellowship Project | Fall 2026
 
-Developed by *The A Team*: Shin Aung, Aditya Sudarshan, Ash Htet, and Ayumi Hermosillo.
+Developed by _The A Team_: Shin Aung, Aditya Sudarshan, Ash Htet, and Ayumi Hermosillo.
 
 Industry Partner: Kaiser Permanente
 
@@ -15,10 +15,12 @@ A prototype call-support dashboard for health-plan customer-service representati
 - Member lookup by ID, name or date of birth, with one-click sample members
 - Simulated real-time transcript playback with keyword highlighting
 - Detected concerns and recorded history in a shared layout
-- Resource suggestions with relevance reasons, eligibility notes and verification labels
-- Representative-controlled sharing: nothing reaches the member unless selected and sent
-- Member chat with sample questions; answers stay grounded in what was shared and route clinical questions to the care team
-- Member profile page with billing, transactions, medications, appointments and history
+- Resource suggestions in their own section under the concerns, each tagged **Call transcript** or **Member profile** (or both) with the reason, eligibility note and verification label
+- Member summary with a “More details” directory that jumps to sections of the member profile
+- Source filter on the suggestions (All, Call transcript, Member profile) with counts
+- Representative-controlled sharing: nothing reaches the member unless selected and sent. **Preview** opens a temporary window showing the member chat as it will look, **Review** toggles a floating editor for the follow-up text, and **Send** delivers it
+- Member chat limited to preset questions (no free typing); answers stay grounded in what was shared and route clinical questions to the care team
+- Member profile page with coverage, billing, transactions, appointments, care and support flags, and history
 - Keyboard and screen-reader friendly controls, light and dark themes
 
 ## Run locally
@@ -45,8 +47,8 @@ docs/ARCHITECTURE.md    Data flow and extension points
 
 ## Extending
 
-- **Add a resource:** add an entry to `R` in `src/data/resources.js` (name, description, trigger regex `k`, eligibility `e`, next action `a`) and a label in `CL`.
-- **Add a member or call:** add an object to `M` in `src/data/members.js`, with its transcript in `tr`, and a line in `SC`.
+- **Add a resource:** add an entry to `R` in `src/data/resources.js` (name, description, trigger regex `k`, eligibility `e`, next action `a`) and a label in `CL`. Add an optional profile rule `p(member)` that returns a reason string to suggest the resource from the member record alone.
+- **Add a member or call:** add an object to `M` in `src/data/members.js`, with its transcript in `tr`, care gaps in `cg`, any social-needs result in `sn`, and a line in `SC`.
 - **Use a real model:** replace the keyword matching in `line()` and the replies in `ans()` and `mq()` in `src/app.js`. See `docs/ARCHITECTURE.md`.
 
 ## Deploying

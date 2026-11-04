@@ -9,18 +9,32 @@ let m = null,
   txt = [],
   sug = {},
   sel = new Set(),
+  dr = null,
+  flt = "all",
   sent = [];
 const $ = (s) => document.querySelector(s),
   esc = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
-document.querySelectorAll("nav button").forEach(
-  (b) =>
-    (b.onclick = () => {
-      document.querySelectorAll("nav button").forEach((x) => x.removeAttribute("aria-current"));
-      b.setAttribute("aria-current", "page");
-      ["ws", "pf", "mb"].forEach((v) => $("#" + v).classList.toggle("hide", v != b.dataset.v));
-      if (b.dataset.v == "pf") prof();
-    }),
-);
+function show(v) {
+  document.querySelectorAll("nav button").forEach((x) => {
+    if (x.dataset.v == v) x.setAttribute("aria-current", "page");
+    else x.removeAttribute("aria-current");
+  });
+  ["ws", "pf", "mb"].forEach((id) => $("#" + id).classList.toggle("hide", id != v));
+  if (v == "pf") prof();
+}
+document.querySelectorAll("nav button").forEach((b) => (b.onclick = () => show(b.dataset.v)));
+// Any element with data-go switches page; data-at names the element to scroll to and focus.
+document.addEventListener("click", (e) => {
+  const b = e.target.closest("[data-go]");
+  if (!b) return;
+  show(b.dataset.go);
+  const el = $("#" + (b.dataset.at || b.dataset.go));
+  if (!el) return;
+  const calm = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  el.scrollIntoView({ block: "start", behavior: calm ? "auto" : "smooth" });
+  el.setAttribute("tabindex", "-1");
+  el.focus({ preventScroll: true });
+});
 $("#samp").innerHTML =
   `<option value="">Member’s sample</option><option value="x">Sample: unrelated call</option>`;
 function find() {
@@ -48,7 +62,7 @@ function find() {
     .join("");
   $("#sum").classList.remove("hide");
   $("#sum").innerHTML =
-    `<h2>${r.name} <span class="tag g">Recorded</span></h2><div class="row mut"><span>ID ${r.id}</span><span>Plan: ${r.plan}</span><span>PCP: ${r.pcp}</span><span>Language: ${r.lang}</span>${r.due ? `<span class="tag v">⚠ Amount due $${r.due.toFixed(2)} by ${r.dd}</span>` : ""}</div>`;
+    `<h2>${r.name} <span class="tag g">Recorded</span></h2><div class="row mut"><span>ID ${r.id}</span><span>Plan: ${r.plan}</span><span>PCP: ${r.pcp}</span><span>Language: ${r.lang}</span>${r.due ? `<span class="tag v">⚠ Amount due $${r.due.toFixed(2)} by ${r.dd}</span>` : ""}</div><div class="more" role="group" aria-label="More member details"><button class="sm" data-go="pf">More details</button><span class="mut">Jump to</span><button class="ghost" data-go="pf" data-at="pf-cover">Coverage</button><button class="ghost" data-go="pf" data-at="pf-appt">Appointments</button><button class="ghost" data-go="pf" data-at="pf-bill">Billing</button><button class="ghost" data-go="pf" data-at="pf-hist">Past interactions</button></div>`;
   $("#hist").innerHTML = r.hist
     .map((h) => {
       const t = h.slice(11),
@@ -82,8 +96,8 @@ function line() {
   $("#tr").scrollTop = 1e5;
   if (w == "Member")
     Object.entries(R).forEach(([k, r]) => {
-      if (!sug[k] && r.k.test(t)) {
-        sug[k] = t;
+      if (r.k.test(t) && !(sug[k] && sug[k].tr)) {
+        sug[k] = { ...sug[k], tr: t, at: i };
         draw();
       }
     });
@@ -95,31 +109,52 @@ function st(k) {
   if (k == "pv" || k == "rx") return ["v", "More information required: confirm on record"];
   return ["", "Potentially relevant"];
 }
+const K = Object.keys(R);
 function draw() {
-  const ks = Object.keys(sug);
-  $("#sugs").innerHTML = ks.length
-    ? ks
+  const ks = Object.keys(sug),
+    tk = ks
+      .filter((k) => sug[k].tr)
+      .sort((a, b) => sug[a].at - sug[b].at || K.indexOf(a) - K.indexOf(b)),
+    np = ks.filter((k) => sug[k].pf).length;
+  const cnt = { all: ks.length, tr: tk.length, pf: np };
+  document.querySelectorAll("#sgf button").forEach((b) => {
+    b.setAttribute("aria-pressed", String(b.dataset.flt == flt));
+    b.querySelector(".n").textContent = cnt[b.dataset.flt];
+  });
+  const shown = ks.filter((k) => flt == "all" || sug[k][flt]);
+  $("#sugs").innerHTML = shown.length
+    ? shown
         .map((k) => {
           const r = R[k],
-            [c, s] = st(k),
-            on = sel.has(k);
-          return `<div class="card sug ${on ? "sel" : ""}"><b>${r.n}</b> <span class="tag ${c}">${on ? "✔ Selected for follow-up" : "● " + s}</span><p>${r.d}</p><p class="mut"><b>Why:</b> Suggested because the member said “${esc(sug[k])}”<br><b>Eligibility:</b> ${r.e}<br><b>Next action:</b> ${r.a}<br><a href="${L}" target="_blank" rel="noopener">Program link</a></p><div class="row"><button data-s="${k}" aria-pressed="${on}">${on ? "Remove from follow-up" : "Select for follow-up"}</button><button data-x="${k}">Dismiss</button></div></div>`;
+            s = sug[k],
+            [c, t] = st(k),
+            on = sel.has(k),
+            why =
+              (s.tr ? `<b>From the call:</b> the member said “${esc(s.tr)}”<br>` : "") +
+              (s.pf ? `<b>From the profile:</b> ${esc(s.pf)}<br>` : "");
+          return `<div class="card sug ${on ? "sel" : ""}"><b>${r.n}</b><div class="tags">${s.tr ? '<span class="tag">Call transcript</span>' : ""}${s.pf ? '<span class="tag pf">Member profile</span>' : ""}<span class="tag ${c}">${on ? "✔ Selected for follow-up" : "● " + t}</span></div><p>${r.d}</p><p class="mut">${why}<b>Eligibility:</b> ${r.e}<br><b>Next action:</b> ${r.a}<br><a href="${L}" target="_blank" rel="noopener">Program link</a></p><div class="row"><button data-s="${k}" aria-pressed="${on}">${on ? "Remove from follow-up" : "Select for follow-up"}</button><button data-x="${k}">Dismiss</button></div></div>`;
         })
         .join("")
-    : '<p class="mut">No relevant resource found yet. Keep listening or ask the assistant.</p>';
-  $("#conc").innerHTML = ks.length
-    ? ks
+    : `<p class="mut">${ks.length ? "No suggestions from the " + (flt == "tr" ? "call transcript" : "member profile") + " yet." : "No relevant resource found yet. Keep listening or ask the assistant."}</p>`;
+  $("#conc").innerHTML = tk.length
+    ? tk
         .map((k) => {
           const [c, s] = st(k);
-          return `<div class="ent"><div class="d"><span class="tag ${k == ks[0] ? "" : "v"}">${k == ks[0] ? "Main concern" : "Also raised"}</span></div><div><b>${CL[k]}</b><p>“${esc(sug[k])}”</p><p>${ctx(k)}</p><p>Related resource: ${R[k].n} · ${s}</p></div></div>`;
+          return `<div class="ent"><div class="d"><span class="tag ${k == tk[0] ? "" : "v"}">${k == tk[0] ? "Main concern" : "Also raised"}</span></div><div><b>${CL[k]}</b><p>“${esc(sug[k].tr)}”</p><p>${ctx(k)}</p><p>Related resource: ${R[k].n} · ${s}</p></div></div>`;
         })
         .join("")
     : "None yet.";
   $("#pend").innerHTML = sel.size
     ? "<ul>" + [...sel].map((k) => `<li>${R[k].n}</li>`).join("") + "</ul>"
     : "Nothing selected.";
-  $("#prev").disabled = $("#send").disabled = !sel.size;
+  $("#prev").disabled = $("#rv").disabled = $("#send").disabled = !sel.size;
 }
+$("#sgf").onclick = (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  flt = b.dataset.flt;
+  draw();
+};
 $("#sugs").onclick = (e) => {
   const s = e.target.dataset.s,
     x = e.target.dataset.x;
@@ -129,17 +164,29 @@ $("#sugs").onclick = (e) => {
     sel.delete(x);
   }
   draw();
+  if (!$("#rev").classList.contains("hide")) sel.size ? review("sync") : closeRev();
 };
-function rst() {
-  clearInterval(tm);
-  tm = null;
+// Start over for the current transcript: profile-based suggestions come back, call-based ones clear.
+function clr() {
   i = 0;
   sug = {};
   sel = new Set();
+  dr = null;
+  closeRev();
+  if (!m) return;
+  Object.entries(R).forEach(([k, r]) => {
+    const why = r.p && r.p(m);
+    if (why) sug[k] = { pf: why };
+  });
+}
+function rst() {
+  clearInterval(tm);
+  tm = null;
   $("#play").textContent = "▶ Play";
   $("#ferr").textContent = "";
   $("#prevbox").textContent = "";
   if (m) txt = m.tr.slice();
+  clr();
   draw();
   $("#tr").innerHTML = '<span class="mut">Transcript reset.</span>';
 }
@@ -153,7 +200,11 @@ const ctx = (k) =>
       ? `On record: ${m.meds}`
       : k == "pv"
         ? `On record: ${m.ap}`
-        : `On record: ${m.plan}`;
+        : k == "cc"
+          ? `On record: ${m.cond}`
+          : k == "ln"
+            ? `On record: ${m.lang}`
+            : `On record: ${m.plan}`;
 $("#mock").innerHTML =
   '<p class="mut" style="margin:12px 0 4px">Sample members (fictional) — select Use to fill the lookup</p><table><tr><th>ID</th><th>Name</th><th>DOB</th><th>Plan</th><th>Call scenario</th><th></th></tr>' +
   M.map(
@@ -197,9 +248,7 @@ $("#samp").onchange = (e) => {
     $("#ferr").textContent = "Look up a member first.";
     return;
   }
-  i = 0;
-  sug = {};
-  sel = new Set();
+  clr();
   txt =
     e.target.value == "x"
       ? [
@@ -232,9 +281,7 @@ $("#file").onchange = (e) => {
       return;
     }
     txt = ls.map((x) => [x[1][0].toUpperCase() == "R" ? "Rep" : "Member", x[2]]);
-    i = 0;
-    sug = {};
-    sel = new Set();
+    clr();
     draw();
     $("#tr").innerHTML =
       '<span class="mut">Loaded ' +
@@ -288,34 +335,130 @@ $("#ask").onclick = () => {
   ask($("#ai").value.trim());
   $("#ai").value = "";
 };
-$("#prev").onclick = () =>
-  ($("#prevbox").innerHTML =
-    "<b>Member will see:</b><br>" +
-    [...sel].map((k) => `• ${R[k].n}: ${R[k].d} (not confirmed; ${R[k].e})`).join("<br>"));
-$("#send").onclick = () => {
-  if (!sel.size) return;
-  sent = [...sel];
-  const c = $("#mc");
-  c.innerHTML =
-    `<div class="b">Hi ${m.name.split(" ")[0]}, here is a follow-up from your call today. These are options your representative reviewed with you. None is a guarantee of approval or coverage.</div>` +
-    sent
+const nl = (t) => esc(t).replace(/\n/g, "<br>");
+// The assistant's draft of the follow-up. Representative edits live here until the message is sent.
+function mkDraft() {
+  const old = dr;
+  dr = {
+    intro: old
+      ? old.intro
+      : `Hi ${m.name.split(" ")[0]}, here is a follow-up from your call today. These are options your representative reviewed with you. None is a guarantee of approval or coverage.`,
+    items: Object.fromEntries(
+      [...sel].map((k) => [k, (old && old.items[k]) || { d: R[k].d, e: R[k].e }]),
+    ),
+    note: old
+      ? old.note
+      : m.ap
+        ? `Reminder: your record lists “${m.ap}”. Nothing was booked on this call.`
+        : "",
+  };
+}
+const hidden = (id) => $(id).classList.contains("hide");
+function closeRev(back) {
+  $("#rev").classList.add("hide");
+  $("#rev").innerHTML = "";
+  $("#rv").setAttribute("aria-expanded", "false");
+  if (back) $("#rv").focus();
+}
+// Floating editor. mode: "open" focuses the first field, "sync" re-renders without moving focus,
+// "stay" re-renders and keeps focus inside the panel.
+function review(mode = "open") {
+  mkDraft();
+  const fld = (lab, f, v, rows, k) =>
+    `<label>${lab}<textarea rows="${rows}" data-f="${f}"${k ? ` data-k="${k}"` : ""}>${esc(v)}</textarea></label>`;
+  const top = hidden("#rev") ? 0 : $("#rev .rv-b").scrollTop;
+  $("#rev").classList.remove("hide");
+  $("#rv").setAttribute("aria-expanded", "true");
+  $("#rev").innerHTML =
+    `<div class="rv-h"><h3>Review and edit</h3><button class="ghost" data-act="close" aria-label="Close editor">Close ✕</button></div><div class="rv-b"><p class="mut">The assistant drafted this message. Edit any text; the member receives exactly what is shown here. Resource names and program links stay as approved.</p>` +
+    fld("Opening message", "intro", dr.intro, 3) +
+    [...sel]
       .map(
         (k) =>
-          `<div class="b"><b>${R[k].n}</b><br>${R[k].d}<br><a href="${L}" target="_blank" rel="noopener">Open program link</a><br><span class="mut">${R[k].e}</span></div>`,
+          `<fieldset><legend>${R[k].n}</legend>${fld("Description", "d", dr.items[k].d, 3, k)}${fld("Eligibility note", "e", dr.items[k].e, 2, k)}<button data-rm="${k}">Remove from follow-up</button></fieldset>`,
       )
       .join("") +
-    (m.ap
-      ? `<div class="b">Reminder: your record lists “${m.ap}”. Nothing was booked on this call.</div>`
-      : "");
-  $("#prevbox").textContent = "Sent (simulated) to the member follow-up chat.";
-  document.querySelector("nav [data-v=mb]").click();
+    fld("Closing note (optional)", "note", dr.note, 2) +
+    `</div><div class="rv-f"><button data-act="reset">Restore assistant draft</button><button class="p" data-act="close">Done</button></div>`;
+  $("#rev .rv-b").scrollTop = top;
+  if (mode == "open") $("#rev textarea").focus();
+  else if (mode == "stay") $("#rev").focus();
+}
+$("#rev").oninput = (e) => {
+  const t = e.target,
+    f = t.dataset.f;
+  if (!dr || !f) return;
+  if (t.dataset.k) dr.items[t.dataset.k][f] = t.value;
+  else dr[f] = t.value;
 };
-function mq() {
-  const q = $("#mi").value.trim();
+$("#rev").onclick = (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  if (b.dataset.rm) {
+    sel.delete(b.dataset.rm);
+    draw();
+    sel.size ? review("stay") : closeRev(true);
+  } else if (b.dataset.act == "reset") {
+    dr = null;
+    review("stay");
+  } else if (b.dataset.act == "close") closeRev(true);
+};
+$("#rev").onkeydown = (e) => e.key == "Escape" && closeRev(true);
+$("#rv").onclick = () => {
+  if (!sel.size) return;
+  hidden("#rev") ? review() : closeRev();
+};
+// The follow-up exactly as it will be delivered: edited text, trimmed, empty parts left out.
+function final() {
+  const t = (x) => x.trim();
+  return {
+    intro: t(dr.intro),
+    items: [...sel].map((k) => ({ k, n: R[k].n, d: t(dr.items[k].d), e: t(dr.items[k].e) })),
+    note: t(dr.note),
+  };
+}
+function fuHtml(f) {
+  return (
+    (f.intro ? `<div class="b">${nl(f.intro)}</div>` : "") +
+    f.items
+      .map(
+        (x) =>
+          `<div class="b"><b>${x.n}</b>${x.d ? "<br>" + nl(x.d) : ""}<br><a href="${L}" target="_blank" rel="noopener">Open program link</a>${x.e ? `<br><span class="mut">${nl(x.e)}</span>` : ""}</div>`,
+      )
+      .join("") +
+    (f.note ? `<div class="b">${nl(f.note)}</div>` : "")
+  );
+}
+// Preview: a temporary window showing the member chat as it will look after sending.
+const pv = $("#pvd");
+const pvClose = () => (pv.close ? pv.close() : pv.removeAttribute("open"));
+$("#prev").onclick = () => {
+  if (!sel.size) return;
+  mkDraft();
+  $("#pvc").innerHTML = fuHtml(final());
+  if (pv.showModal) pv.showModal();
+  else pv.setAttribute("open", "");
+};
+$("#pvx").onclick = pvClose;
+pv.onclick = (e) => e.target == pv && pvClose();
+$("#send").onclick = () => sel.size && sendFollowUp();
+function sendFollowUp() {
+  if (!sel.size) return;
+  mkDraft();
+  const f = final();
+  sent = f.items;
+  $("#mc").innerHTML = fuHtml(f);
+  dr = null;
+  closeRev();
+  $("#prevbox").textContent = "Sent (simulated) to the member follow-up chat.";
+  show("mb");
+}
+// Members choose from preset questions only; there is no free-text box in the member chat.
+function mq(q) {
   if (!q) return;
-  $("#mi").value = "";
   let a;
-  const l = q.toLowerCase();
+  const l = q.toLowerCase(),
+    named = (x) => (x.e ? x.n + " (" + x.e + ")" : x.n);
   if (!sent.length) a = "Nothing has been shared yet.";
   else if (/dose|stop|symptom|treat|pain|medicat/.test(l))
     a =
@@ -323,16 +466,17 @@ function mq() {
   else if (/approv|qualify|eligib|guarantee|will i/.test(l))
     a =
       "I can’t say whether you’ll qualify. The program decides after review. Items shared: " +
-      sent.map((k) => R[k].n + " (" + R[k].e + ")").join(" • ");
+      sent.map(named).join(" • ");
   else if (/next|document/.test(l))
     a = sent
-      .map((k) => R[k].n + ": " + R[k].e + " The program link is the place to start.")
+      .map((x) => x.n + ": " + (x.e ? x.e + " " : "") + "The program link is the place to start.")
       .join(" • ");
-  else if (/what|how|explain|link/.test(l)) a = sent.map((k) => R[k].n + ": " + R[k].d).join(" • ");
+  else if (/what|how|explain|link/.test(l))
+    a = sent.map((x) => (x.d ? x.n + ": " + x.d : x.n)).join(" • ");
   else
     a =
       "I can explain only the items your representative shared: " +
-      sent.map((k) => R[k].n).join(", ") +
+      sent.map((x) => x.n).join(", ") +
       ".";
   $("#mc").insertAdjacentHTML(
     "beforeend",
@@ -340,7 +484,6 @@ function mq() {
   );
   $("#mc").scrollTop = 1e5;
 }
-$("#mask").onclick = mq;
 $("#mqs").innerHTML = [
   "What is this?",
   "Will I be approved?",
@@ -351,12 +494,9 @@ $("#mqs").innerHTML = [
   .map((q) => `<button class="chip">${q}</button>`)
   .join("");
 $("#mqs").onclick = (e) => {
-  if (e.target.tagName == "BUTTON") {
-    $("#mi").value = e.target.textContent;
-    mq();
-  }
+  const b = e.target.closest("button");
+  if (b) mq(b.textContent);
 };
-$("#mi").onkeydown = (e) => e.key == "Enter" && mq();
 $("#ai").onkeydown = (e) => e.key == "Enter" && $("#ask").click();
 function prof() {
   const p = $("#pf");
@@ -365,9 +505,9 @@ function prof() {
       '<div class="card"><h2>Member profile</h2><p class="mut">No member selected. Go to the workspace and look up a fictional member.</p></div>';
     return;
   }
-  const t = (a, b) =>
-    `<div class="card"><h2>${a}</h2>${
-      /<(table|ul|b)/.test(b)
+  const t = (a, b, id) =>
+    `<div class="card"${id ? ` id="${id}"` : ""}><h2>${a}</h2>${
+      /<(table|ul)/.test(b)
         ? b
         : b
             .split("<br>")
@@ -380,23 +520,33 @@ function prof() {
             .join("")
     }</div>`;
   p.innerHTML =
-    `<p class="eb">Records / Active member</p><div class="pt">Member profile</div><p class="ps">Recorded details used during the call.</p><div class="grid"><section class="ph"><i>${m.name
+    `<div class="row"><button class="ghost" data-go="ws">← Back to workspace</button></div><p class="eb">Records / Active member</p><div class="pt">Member profile</div><p class="ps">Recorded details used during the call.</p><div class="grid"><section class="ph"><i>${m.name
       .split(" ")
       .map((w) => w[0])
       .join("")}</i><div><b>${m.name}</b><span>${m.id} · ${m.plan}</span></div></section><div>` +
+    t("Personal details", `${m.name}<br>DOB ${m.dob}<br>Language: ${m.lang}`, "pf-personal") +
     t(
-      "Personal details",
-      `${m.name}<br>DOB ${m.dob}<br>Language: ${m.lang}`,
+      "Membership and coverage",
+      `ID ${m.id}<br>Plan: ${m.plan}<br>${m.cov}<br>PCP: ${m.pcp}`,
+      "pf-cover",
     ) +
-    t("Membership and coverage", `ID ${m.id}<br>Plan: ${m.plan}<br>${m.cov}<br>PCP: ${m.pcp}`) +
-    t("Appointments and procedures", `Next: ${m.ap}<br>Procedures: ${m.sx}`) +
+    t("Appointments and procedures", `Next: ${m.ap}<br>Procedures: ${m.sx}`, "pf-appt") +
+    t(
+      "Care and support flags",
+      `Care gaps: ${(m.cg || []).join("; ") || "None"}<br>Social needs: ${m.sn || "None flagged"}`,
+      "pf-flags",
+    ) +
     `</div><div>` +
-    t("Billing", m.due ? `Amount due: <b>$${m.due.toFixed(2)}</b> by ${m.dd}` : "No amount due.") +
+    t(
+      "Billing",
+      m.due ? `Amount due: <b>$${m.due.toFixed(2)}</b> by ${m.dd}` : "No amount due.",
+      "pf-bill",
+    ) +
     t(
       "Transaction history",
       `<table><tr><th>Date</th><th>Item</th><th>Amount</th></tr>${m.tx.map((x) => `<tr><td>${x[0]}</td><td>${x[1]}</td><td>${x[2]}</td></tr>`).join("")}</table>`,
     ) +
-    t("Past interactions", `<ul>${m.hist.map((h) => `<li>${h}</li>`).join("")}</ul>`) +
+    t("Past interactions", `<ul>${m.hist.map((h) => `<li>${h}</li>`).join("")}</ul>`, "pf-hist") +
     `</div></div>`;
 }
 prof();

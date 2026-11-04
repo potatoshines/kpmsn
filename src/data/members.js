@@ -1,5 +1,6 @@
 // Mock member records (all fictional). tr = sample call transcript as [speaker, text] pairs.
 // tp = plan includes transportation assistance. SC = one-line scenario shown as a tooltip.
+// cg = care gaps on record, sn = social-needs screening result (both feed profile-based suggestions).
 export const M = [
   {
     id: "KP-100234",
@@ -24,6 +25,8 @@ export const M = [
     cond: "Type 2 diabetes",
     ap: "2026-11-12 Primary care follow-up",
     sx: "None scheduled",
+    cg: ["Diabetic eye exam due (last recorded 2025-08)"],
+    sn: "",
     hist: ["2026-09-20 Billing question about lab charge", "2026-06-03 Address update"],
     tr: [
       ["Rep", "Thank you for calling Member Services. How can I help?"],
@@ -56,6 +59,8 @@ export const M = [
     cond: "Hypertension",
     ap: "2026-11-09 Cardiology visit",
     sx: "2026-12-02 Colonoscopy",
+    cg: ["Annual flu vaccine due"],
+    sn: "",
     hist: ["2026-08-12 Refill question", "2026-05-30 Appointment reschedule"],
     tr: [
       ["Rep", "Member Services, how can I help?"],
@@ -84,6 +89,8 @@ export const M = [
     cond: "High cholesterol",
     ap: "2026-11-18 Annual checkup",
     sx: "None scheduled",
+    cg: ["Colorectal cancer screening overdue (last recorded 2019)"],
+    sn: "Food insecurity flagged on 2026-08-14 screening",
     hist: ["2026-09-02 Provider directory question"],
     tr: [
       ["Rep", "Member Services, how can I help?"],

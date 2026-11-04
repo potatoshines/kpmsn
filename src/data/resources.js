@@ -1,5 +1,7 @@
 // Approved resource knowledge base. Add a resource by adding an entry here.
 // k: transcript trigger (regex), e: eligibility note, a: rep next action, CL: concern label.
+// p: optional profile rule. Given a member record, returns a short reason string when the record
+//    alone justifies suggesting the resource, otherwise a falsy value.
 export const R = {
   fa: {
     n: "Medical Financial Assistance",
@@ -14,6 +16,7 @@ export const R = {
     k: /payment plan|monthly|installment|over time|bill/i,
     e: "Verify balance and plan terms with Billing.",
     a: "Confirm the amount due and offer plan options.",
+    p: (m) => m.due > 0 && `Balance on record: $${m.due.toFixed(2)} due ${m.dd}`,
   },
   hub: {
     n: "Community Support Hub",
@@ -21,6 +24,7 @@ export const R = {
     k: /food|rent|housing|groceries/i,
     e: "Community organizations set their own eligibility.",
     a: "Share the link and the member’s ZIP code search.",
+    p: (m) => m.sn && `Social-needs screening on record: ${m.sn}`,
   },
   rx: {
     n: "Prescription refill and delivery",
@@ -35,6 +39,7 @@ export const R = {
     k: /screening|checkup|overdue|vaccine|colonoscopy/i,
     e: "Confirm the item is recorded as due; clinical questions go to the care team.",
     a: "Remind the member to schedule with their care team.",
+    p: (m) => m.cg && m.cg.length > 0 && `Care gap on record: ${m.cg.join("; ")}`,
   },
   tr: {
     n: "Transportation assistance",
@@ -42,6 +47,23 @@ export const R = {
     k: /ride|transport|get to|drive/i,
     e: "Only certain plans; verify plan eligibility first.",
     a: "Check plan type before discussing.",
+    p: (m) => m.tp && `Plan includes transportation assistance; next appointment: ${m.ap}`,
+  },
+  cc: {
+    n: "Chronic condition support program",
+    d: "Coaching, education and regular check-ins for members managing a long-term condition.",
+    k: /diabet|blood pressure|cholesterol|sugar/i,
+    e: "Enrollment criteria apply; the care team confirms eligibility.",
+    a: "Offer to connect the member with their care team to enroll.",
+    p: (m) => m.cond && `Condition on record: ${m.cond}`,
+  },
+  ln: {
+    n: "Language assistance services",
+    d: "Free interpreter services and translated materials for calls and visits.",
+    k: /interpret|translat|spanish|mandarin|language/i,
+    e: "No cost to the member; confirm the preferred language first.",
+    a: "Confirm the preferred language and offer an interpreter for future contact.",
+    p: (m) => m.lang.split(" / ")[0] !== "English" && `Preferred language on record: ${m.lang}`,
   },
 };
 export const L = "https://healthy.kaiserpermanente.org/";
@@ -52,4 +74,6 @@ export const CL = {
   rx: "Prescription access",
   pv: "Preventive care due",
   tr: "Getting to appointments",
+  cc: "Managing a long-term condition",
+  ln: "Language support",
 };
