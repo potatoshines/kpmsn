@@ -358,39 +358,10 @@ mark {
   gap: 4px 16px;
 }
 
-/* ---------- Workspace: transcript left, suggestions right ---------- */
-#ws .grid {
-  grid-template-columns: minmax(0, 1fr) !important;
-}
-#ws .grid > div {
-  min-width: 0;
-}
+/* ---------- Workspace: one column (transcript, concerns, suggestions, follow-up); the page is the only scroller ---------- */
 .row input,
 .row select {
   max-width: 100%;
-}
-@media (min-width: 960px) {
-  #ws .grid {
-    grid-template-columns: minmax(0, 1.4fr) minmax(340px, 1fr) !important;
-    gap: 28px;
-    align-items: start;
-  }
-  #ws .grid > div {
-    display: block;
-    min-width: 0;
-  }
-  #ws .grid > div:last-child {
-    position: sticky;
-    top: 96px;
-    max-height: calc(100vh - 112px);
-    overflow: auto;
-    padding: 2px;
-  }
-}
-@media (max-width: 959px) {
-  #ws .grid > div {
-    display: block;
-  }
 }
 #tr {
   max-height: 360px;
@@ -419,8 +390,19 @@ mark {
 
 /* ---------- Suggestions ---------- */
 #sugs {
-  grid-template-columns: 1fr;
-  gap: 12px;
+  grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
+  gap: 16px;
+  align-items: start;
+}
+#sugs > .mut {
+  grid-column: 1 / -1;
+  margin: 0;
+}
+.sug .tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin: 8px 0 4px;
 }
 .sug,
 .sug.sel {
@@ -635,12 +617,12 @@ header h1 .logo {
   margin: 0;
 }
 header h1 .nm {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
+  display: block;
+  margin-top: 6px;
+  font-size: 15px;
+  font-weight: 600;
+  letter-spacing: 0;
+  color: #92ccf0;
 }
 header nav {
   align-self: center;
@@ -678,4 +660,193 @@ header nav button:hover:not(:disabled) {
 }
 header nav button[data-v][aria-current="page"] {
   border-bottom-color: #92ccf0;
+}
+
+/* ---------- Member summary: link to the full profile ---------- */
+#sum .more {
+  grid-column: 2;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 6px;
+  margin-top: 8px;
+}
+#sum .more .mut {
+  margin: 0 2px 0 10px;
+}
+button.sm {
+  min-height: 32px;
+  padding: 0 14px;
+}
+#pf > .row {
+  margin-bottom: 8px;
+}
+
+/* ---------- Follow-up editor: floating panel, toggled by the Review button ---------- */
+.rev {
+  position: fixed;
+  right: 20px;
+  bottom: 20px;
+  z-index: 20;
+  display: flex;
+  flex-direction: column;
+  width: min(460px, calc(100vw - 24px));
+  max-height: min(80vh, 720px);
+  background: var(--card);
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+  box-shadow: 0 16px 48px rgba(13, 28, 61, 0.28);
+}
+.rev.hide {
+  display: none;
+}
+.rv-h,
+.rv-f {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 10px 16px;
+}
+.rv-h {
+  border-bottom: 1px solid var(--bd);
+}
+.rv-f {
+  justify-content: flex-end;
+  border-top: 1px solid var(--bd);
+}
+.rv-b {
+  flex: 1;
+  min-height: 0;
+  overflow: auto;
+  padding: 4px 16px 16px;
+}
+.rev h3 {
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+.rev label {
+  display: block;
+  margin: 12px 0 0;
+}
+.rev textarea {
+  display: block;
+  width: 100%;
+  margin-top: 4px;
+  padding: 8px 12px;
+  background: var(--card);
+  color: var(--tx);
+  border: 1px solid var(--bd);
+  border-radius: 4px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 400;
+  line-height: 1.5;
+  resize: vertical;
+}
+.rev fieldset {
+  min-width: 0;
+  margin: 16px 0 0;
+  padding: 4px 14px 14px;
+  border: 1px solid var(--bd);
+  border-radius: 8px;
+}
+.rev legend {
+  padding: 0 6px;
+  font-weight: 700;
+}
+.rev fieldset > button {
+  margin-top: 10px;
+}
+
+/* ---------- Review button chevron (dropdown cue) ---------- */
+#rv {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+#rv .chev {
+  flex: none;
+  transition: transform 0.15s;
+}
+#rv[aria-expanded="true"] .chev {
+  transform: rotate(180deg);
+}
+#rv[aria-expanded="true"] {
+  background: var(--pg);
+}
+@media (prefers-reduced-motion: reduce) {
+  #rv .chev {
+    transition: none;
+  }
+}
+
+/* ---------- Preview window ---------- */
+#pvd {
+  width: min(520px, calc(100vw - 24px));
+  max-height: 90vh;
+  padding: 0;
+  overflow: auto;
+  background: var(--card);
+  color: var(--tx);
+  border: 1px solid var(--bd);
+  border-radius: 12px;
+  box-shadow: 0 20px 60px rgba(13, 28, 61, 0.35);
+}
+#pvd::backdrop {
+  background: rgba(13, 28, 61, 0.55);
+}
+.pvin {
+  padding: 16px 20px 20px;
+}
+.pvh {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.pvh h2 {
+  margin: 0;
+  font-size: 17px;
+}
+#pvd .phone {
+  margin: 8px 0 0;
+  max-width: none;
+}
+#pvd .phone .chat {
+  max-height: none;
+  min-height: 0;
+  overflow: visible;
+}
+
+/* ---------- Suggestion source filter and tags ---------- */
+.filt {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 16px;
+}
+.filt button {
+  min-height: 36px;
+}
+.filt button .n {
+  margin-left: 4px;
+  font-weight: 500;
+  opacity: 0.8;
+}
+.filt button[aria-pressed="true"] {
+  background: var(--pri);
+  border-color: var(--pri);
+  color: var(--on-pri);
+}
+.tag.pf {
+  background: var(--tile);
+  color: var(--mut);
+  border: 1px solid var(--bd);
+}
+
+/* ---------- Member chat: preset questions only ---------- */
+#mqs {
+  margin-top: 6px;
 }
