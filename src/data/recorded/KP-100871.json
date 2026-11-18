@@ -1,0 +1,36 @@
+{
+  "version": 1,
+  "member": "KP-100871",
+  "recordedAt": "2026-11-18T18:30:26.528Z",
+  "model": "gemini-3.5-flash-lite",
+  "transcript": [
+    [
+      "Rep",
+      "Member Services, how can I help?"
+    ],
+    [
+      "Member",
+      "I need a refill on my prescription and delivery would be easier."
+    ],
+    [
+      "Member",
+      "Also I can’t drive anymore, I need a ride to my cardiology appointment."
+    ],
+    [
+      "Rep",
+      "I can help look at that."
+    ],
+    [
+      "Member",
+      "I think my screening is overdue too, I’m not sure."
+    ]
+  ],
+  "tags": {
+    "2": [
+      "prescription_refills",
+      "home_delivery"
+    ],
+    "3": [],
+    "5": []
+  }
+}

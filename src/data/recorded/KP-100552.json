@@ -1,0 +1,31 @@
+{
+  "version": 1,
+  "member": "KP-100552",
+  "recordedAt": "2026-11-18T18:31:14.012Z",
+  "model": "gemini-3.5-flash-lite",
+  "transcript": [
+    [
+      "Rep",
+      "Member Services, how can I help?"
+    ],
+    [
+      "Member",
+      "I got a reminder about a checkup and I think my screening is overdue."
+    ],
+    [
+      "Member",
+      "Also money is tight and groceries have gotten hard, is there any food help?"
+    ],
+    [
+      "Rep",
+      "Let me look at what resources exist."
+    ]
+  ],
+  "tags": {
+    "2": [],
+    "3": [
+      "food_assistance",
+      "food_insecurity"
+    ]
+  }
+}

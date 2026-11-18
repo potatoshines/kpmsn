@@ -1,0 +1,48 @@
+{
+  "version": 1,
+  "member": "KP-100234",
+  "recordedAt": "2026-11-18T18:29:04.332Z",
+  "model": "gemini-3.5-flash-lite",
+  "transcript": [
+    [
+      "Rep",
+      "Thank you for calling Member Services. How can I help?"
+    ],
+    [
+      "Member",
+      "Hi, I got a medical bill and I can’t afford the full amount right now."
+    ],
+    [
+      "Rep",
+      "I’m sorry to hear that. Can you tell me more?"
+    ],
+    [
+      "Member",
+      "It’s $412 and I’m struggling with rent this month too."
+    ],
+    [
+      "Member",
+      "Is there a payment plan, monthly, so I can pay over time?"
+    ],
+    [
+      "Rep",
+      "Let me look into options for you."
+    ]
+  ],
+  "tags": {
+    "2": [
+      "financial_assistance",
+      "high_medical_costs",
+      "medical_bills",
+      "outstanding_balance",
+      "payment_difficulty"
+    ],
+    "4": [
+      "high_medical_costs",
+      "rent_assistance"
+    ],
+    "5": [
+      "payment_plans"
+    ]
+  }
+}
