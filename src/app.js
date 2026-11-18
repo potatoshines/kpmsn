@@ -1,8 +1,14 @@
-// Member Service Navigator: workspace, profile and member follow-up chat logic.
-// Analysis is simulated: keyword rules in data/resources.js stand in for a model.
-import { R, L, CL } from "./data/resources.js";
+// Member Service Navigator: workspace, profile and the one-way member follow-up message.
+// Member lines are tagged by the tagging agent (agent-client.js, settings in config.js); with no agent
+// configured, or when it cannot be reached, the keyword rules in data/tag-rules.js answer instead.
+// Resources come from data/kp_resource_opportunity_catalog.csv.
 import { M, SC } from "./data/members.js";
+import { loadCatalog, emptyCatalog, matchTags, normTag, humanTag } from "./data/catalog.js";
+import { RULES, tagLine, tagProfile, tagText, recordContext } from "./data/tag-rules.js";
+import { esc, escAttr, nameOf, isFlagged, cardParts } from "./card.js";
+import { createAgent } from "./agent-client.js";
 
+const agent = createAgent();
 let m = null,
   i = 0,
   tm = null,
@@ -10,10 +16,18 @@ let m = null,
   sug = {},
   sel = new Set(),
   dr = null,
-  flt = "all",
-  sent = [];
-const $ = (s) => document.querySelector(s),
-  esc = (s) => s.replace(/[&<>]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" })[c]);
+  flt = "all";
+const $ = (s) => document.querySelector(s);
+// The resource catalog (src/data/kp_resource_opportunity_catalog.csv). If it cannot be loaded the rest
+// of the app still works and the suggestions area says what went wrong.
+let catalog = emptyCatalog(),
+  catalogError = "";
+try {
+  catalog = await loadCatalog();
+  if (catalog.problems.length) console.warn("Resource catalog:\n" + catalog.problems.join("\n"));
+} catch (e) {
+  catalogError = e.message;
+}
 function show(v) {
   document.querySelectorAll("nav button").forEach((x) => {
     if (x.dataset.v == v) x.setAttribute("aria-current", "page");
@@ -66,10 +80,8 @@ function find() {
   $("#hist").innerHTML = r.hist
     .map((h) => {
       const t = h.slice(11),
-        rel = Object.values(R)
-          .filter((x) => x.k.test(t))
-          .map((x) => x.n);
-      return `<div class="ent"><div class="d">${h.slice(0, 10)}</div><div><b>${t}</b><p>Recorded interaction${rel.length ? " · Related: " + rel.join(", ") : ""}</p><p>Status: Closed</p></div></div>`;
+        rel = matchTags(catalog, tagText(t)).map((x) => nameOf(catalog.get(x.id)));
+      return `<div class="ent"><div class="d">${h.slice(0, 10)}</div><div><b>${t}</b><p>Recorded interaction${rel.length ? " · Related: " + rel.map(esc).join(", ") : ""}</p><p>Status: Closed</p></div></div>`;
     })
     .join("");
   txt = r.tr.slice();
@@ -78,8 +90,8 @@ function find() {
 }
 function hl(s) {
   let o = esc(s);
-  Object.values(R).forEach((r) => {
-    o = o.replace(new RegExp(r.k.source, "gi"), (x) => `<mark>${x}</mark>`);
+  RULES.forEach((r) => {
+    o = o.replace(new RegExp(r.re.source, "gi"), (x) => `<mark>${x}</mark>`);
   });
   return o;
 }
@@ -94,27 +106,61 @@ function line() {
   if (i == 1) $("#tr").innerHTML = "";
   $("#tr").insertAdjacentHTML("beforeend", `<p class="ln"><b>${w}:</b> ${hl(t)}</p>`);
   $("#tr").scrollTop = 1e5;
-  if (w == "Member")
-    Object.entries(R).forEach(([k, r]) => {
-      if (r.k.test(t) && !(sug[k] && sug[k].tr)) {
-        sug[k] = { ...sug[k], tr: t, at: i };
-        draw();
-      }
-    });
+  if (w == "Member") {
+    queueTagging(t);
+  }
 }
-function st(k) {
-  const r = R[k];
-  if (k == "tr" && !m.tp)
-    return ["v", "Eligibility needs verification: this plan may not include it"];
-  if (k == "pv" || k == "rx") return ["v", "More information required: confirm on record"];
-  return ["", "Potentially relevant"];
+// Member lines go to the agent one at a time, in order, so cards keep the first line that produced
+// them. `gen` changes on every reset, so a slow answer for an old transcript is dropped.
+let gen = 0,
+  chain = Promise.resolve();
+const STATUS = {
+  agent: "Tagging: Gemini agent",
+  rules: "Tagging: simulated keyword rules",
+  fallback: "Tagging: keyword rules (agent unavailable for some lines)",
+};
+function queueTagging(t) {
+  const g = gen,
+    mm = m,
+    turn = i,
+    lines = txt.slice(0, i);
+  chain = chain
+    .then(() => agent.tagMemberLine(lines, turn, mm))
+    .then(({ items, mode }) => {
+      if (g !== gen) return;
+      applyTags(items);
+      const st = $("#agentst");
+      if (st && (mode === "fallback" || !st.dataset.mode || st.dataset.mode === "agent"))
+        ((st.dataset.mode = mode), (st.textContent = STATUS[mode]));
+      draw();
+    })
+    .catch((e) => console.warn("Tagging failed:", e));
 }
-const K = Object.keys(R);
+// The seam for the tagging agent. `items` is what the agent returns:
+//   [{ tag, source: "transcript" | "profile", turn?, evidence }]
+// Tags are matched to catalog rows (matchTags). A card keeps the first transcript line that produced
+// it (`tr` quote, `at` line number, `tt` that line's tags) and its profile evidence (`pf`).
+function applyTags(items) {
+  const groups = new Map();
+  for (const it of items) {
+    const key = it.source == "profile" ? "pf" : "tr" + it.turn;
+    (groups.get(key) || groups.set(key, []).get(key)).push(it);
+  }
+  for (const [key, g] of groups)
+    for (const hit of matchTags(
+      catalog,
+      g.map((x) => x.tag),
+    )) {
+      const why = g.find((x) => hit.tags.includes(normTag(x.tag))),
+        s = sug[hit.id] || (sug[hit.id] = {});
+      if (key == "pf") {
+        if (!s.pf) s.pf = why.evidence;
+      } else if (!s.tr) Object.assign(s, { tr: why.evidence, at: why.turn, tt: hit.tags });
+    }
+}
 function draw() {
   const ks = Object.keys(sug),
-    tk = ks
-      .filter((k) => sug[k].tr)
-      .sort((a, b) => sug[a].at - sug[b].at || K.indexOf(a) - K.indexOf(b)),
+    tk = ks.filter((k) => sug[k].tr),
     np = ks.filter((k) => sug[k].pf).length;
   const cnt = { all: ks.length, tr: tk.length, pf: np };
   document.querySelectorAll("#sgf button").forEach((b) => {
@@ -122,30 +168,37 @@ function draw() {
     b.querySelector(".n").textContent = cnt[b.dataset.flt];
   });
   const shown = ks.filter((k) => flt == "all" || sug[k][flt]);
-  $("#sugs").innerHTML = shown.length
-    ? shown
-        .map((k) => {
-          const r = R[k],
-            s = sug[k],
-            [c, t] = st(k),
-            on = sel.has(k),
-            why =
-              (s.tr ? `<b>From the call:</b> the member said “${esc(s.tr)}”<br>` : "") +
-              (s.pf ? `<b>From the profile:</b> ${esc(s.pf)}<br>` : "");
-          return `<div class="card sug ${on ? "sel" : ""}"><b>${r.n}</b><div class="tags">${s.tr ? '<span class="tag">Call transcript</span>' : ""}${s.pf ? '<span class="tag pf">Member profile</span>' : ""}<span class="tag ${c}">${on ? "✔ Selected for follow-up" : "● " + t}</span></div><p>${r.d}</p><p class="mut">${why}<b>Eligibility:</b> ${r.e}<br><b>Next action:</b> ${r.a}<br><a href="${L}" target="_blank" rel="noopener">Program link</a></p><div class="row"><button data-s="${k}" aria-pressed="${on}">${on ? "Remove from follow-up" : "Select for follow-up"}</button><button data-x="${k}">Dismiss</button></div></div>`;
-        })
-        .join("")
-    : `<p class="mut">${ks.length ? "No suggestions from the " + (flt == "tr" ? "call transcript" : "member profile") + " yet." : "No relevant resource found yet. Keep listening or ask the assistant."}</p>`;
-  $("#conc").innerHTML = tk.length
-    ? tk
-        .map((k) => {
-          const [c, s] = st(k);
-          return `<div class="ent"><div class="d"><span class="tag ${k == tk[0] ? "" : "v"}">${k == tk[0] ? "Main concern" : "Also raised"}</span></div><div><b>${CL[k]}</b><p>“${esc(sug[k].tr)}”</p><p>${ctx(k)}</p><p>Related resource: ${R[k].n} · ${s}</p></div></div>`;
+  $("#sugs").innerHTML = catalogError
+    ? `<p class="err">${esc(catalogError)} Resource suggestions are unavailable. If you opened index.html directly, run npm start instead.</p>`
+    : shown.length
+      ? shown
+          .map((k) => {
+            const s = sug[k],
+              on = sel.has(k),
+              { title, body, flagged } = cardParts(catalog.get(k));
+            return `<div class="card sug ${on ? "sel" : ""}">${title}<div class="tags">${s.tr ? '<span class="tag">Call transcript</span>' : ""}${s.pf ? '<span class="tag pf">Member profile</span>' : ""}<span class="tag ${flagged ? "v" : ""}">${flagged ? "⚠ Incomplete catalog data" : on ? "✔ Selected for follow-up" : "● Potentially relevant"}</span></div>${body}<div class="row"><button data-s="${escAttr(k)}" aria-pressed="${on}"${flagged ? " disabled" : ""}>${on ? "Remove from follow-up" : "Select for follow-up"}</button><button data-x="${escAttr(k)}">Dismiss</button></div></div>`;
+          })
+          .join("")
+      : `<p class="mut">${ks.length ? "No suggestions from the " + (flt == "tr" ? "call transcript" : "member profile") + " yet." : "No relevant resource found yet. Keep listening or ask the assistant."}</p>`;
+  // One concern per member line that produced a suggestion, in call order.
+  const lines = new Map();
+  tk.forEach((k) => {
+    const s = sug[k],
+      g = lines.get(s.at) || lines.set(s.at, { quote: s.tr, tags: new Set(), ids: [] }).get(s.at);
+    s.tt.forEach((t) => g.tags.add(t));
+    g.ids.push(k);
+  });
+  $("#conc").innerHTML = lines.size
+    ? [...lines]
+        .sort((a, b) => a[0] - b[0])
+        .map(([, g], n) => {
+          const tags = [...g.tags];
+          return `<div class="ent"><div class="d"><span class="tag ${n ? "v" : ""}">${n ? "Also raised" : "Main concern"}</span></div><div><b>${esc(tags.slice(0, 3).map(humanTag).join(" · "))}</b><p>“${esc(g.quote)}”</p><p>${esc(recordContext(tags, m))}</p><p>Related resources: ${g.ids.map((k) => esc(nameOf(catalog.get(k)))).join("; ")}</p></div></div>`;
         })
         .join("")
     : "None yet.";
   $("#pend").innerHTML = sel.size
-    ? "<ul>" + [...sel].map((k) => `<li>${R[k].n}</li>`).join("") + "</ul>"
+    ? "<ul>" + [...sel].map((k) => `<li>${esc(nameOf(catalog.get(k)))}</li>`).join("") + "</ul>"
     : "Nothing selected.";
   $("#prev").disabled = $("#rv").disabled = $("#send").disabled = !sel.size;
 }
@@ -158,7 +211,7 @@ $("#sgf").onclick = (e) => {
 $("#sugs").onclick = (e) => {
   const s = e.target.dataset.s,
     x = e.target.dataset.x;
-  if (s) sel.has(s) ? sel.delete(s) : sel.add(s);
+  if (s && !isFlagged(catalog.get(s))) sel.has(s) ? sel.delete(s) : sel.add(s);
   if (x) {
     delete sug[x];
     sel.delete(x);
@@ -168,16 +221,16 @@ $("#sugs").onclick = (e) => {
 };
 // Start over for the current transcript: profile-based suggestions come back, call-based ones clear.
 function clr() {
+  gen++;
   i = 0;
+  const st = $("#agentst");
+  if (st) ((st.dataset.mode = ""), (st.textContent = agent.enabled ? "" : STATUS.rules));
   sug = {};
   sel = new Set();
   dr = null;
   closeRev();
   if (!m) return;
-  Object.entries(R).forEach(([k, r]) => {
-    const why = r.p && r.p(m);
-    if (why) sug[k] = { pf: why };
-  });
+  applyTags(tagProfile(m));
 }
 function rst() {
   clearInterval(tm);
@@ -191,20 +244,6 @@ function rst() {
   $("#tr").innerHTML = '<span class="mut">Transcript reset.</span>';
 }
 $("#find").onclick = find;
-const ctx = (k) =>
-  k == "fa" || k == "pp"
-    ? m.due
-      ? `On record: $${m.due.toFixed(2)} due ${m.dd}`
-      : "On record: no amount due"
-    : k == "rx"
-      ? `On record: ${m.meds}`
-      : k == "pv"
-        ? `On record: ${m.ap}`
-        : k == "cc"
-          ? `On record: ${m.cond}`
-          : k == "ln"
-            ? `On record: ${m.lang}`
-            : `On record: ${m.plan}`;
 $("#mock").innerHTML =
   '<p class="mut" style="margin:12px 0 4px">Sample members (fictional) — select Use to fill the lookup</p><table><tr><th>ID</th><th>Name</th><th>DOB</th><th>Plan</th><th>Call scenario</th><th></th></tr>' +
   M.map(
@@ -306,14 +345,26 @@ function ans(q) {
   if (!m) return "Look up a member first.";
   if (/summar/.test(q))
     return ks.length
-      ? `Simulated summary (generated, not recorded): the member raised ${ks.map((k) => R[k].n.toLowerCase()).join(", ")}. ${i < txt.length ? "The call is still in progress." : ""}`
+      ? `Simulated summary (generated, not recorded): suggested resources so far are ${ks.map((k) => nameOf(catalog.get(k))).join("; ")}. ${i < txt.length ? "The call is still in progress." : ""}`
       : "Nothing in the transcript yet to summarize.";
   if (/next|step/.test(q))
     return ks.length
-      ? ks.map((k) => R[k].n + ": " + R[k].a).join(" • ")
+      ? ks
+          .map((k) => {
+            const r = catalog.get(k);
+            return `${nameOf(r)}: ${r.eligibility ? "check eligibility, then " : ""}${r.url ? "review the program link with the member." : "no link available in the catalog."}`;
+          })
+          .join(" • ")
       : "No suggestions yet. Play the transcript.";
   if (/verif/.test(q))
-    return ks.length ? ks.map((k) => R[k].n + ": " + R[k].e).join(" • ") : "Nothing to verify yet.";
+    return ks.length
+      ? ks
+          .map(
+            (k) =>
+              `${nameOf(catalog.get(k))}: ${catalog.get(k).eligibility || "no eligibility note in the catalog."}`,
+          )
+          .join(" • ")
+      : "Nothing to verify yet.";
   if (/bill|due|balance/.test(q))
     return m.due
       ? `Recorded: $${m.due.toFixed(2)} due ${m.dd}. See the Member profile page for transactions.`
@@ -343,8 +394,10 @@ function mkDraft() {
     intro: old
       ? old.intro
       : `Hi ${m.name.split(" ")[0]}, here is a follow-up from your call today. These are options your representative reviewed with you. None is a guarantee of approval or coverage.`,
+    // The member's message carries only each resource's description and link. Eligibility is shown
+    // on the representative's cards and nowhere on the member side.
     items: Object.fromEntries(
-      [...sel].map((k) => [k, (old && old.items[k]) || { d: R[k].d, e: R[k].e }]),
+      [...sel].map((k) => [k, (old && old.items[k]) || { d: catalog.get(k).description }]),
     ),
     note: old
       ? old.note
@@ -375,7 +428,7 @@ function review(mode = "open") {
     [...sel]
       .map(
         (k) =>
-          `<fieldset><legend>${R[k].n}</legend>${fld("Description", "d", dr.items[k].d, 3, k)}${fld("Eligibility note", "e", dr.items[k].e, 2, k)}<button data-rm="${k}">Remove from follow-up</button></fieldset>`,
+          `<fieldset><legend>${esc(nameOf(catalog.get(k)))}</legend>${fld("Description", "d", dr.items[k].d, 3, k)}<button data-rm="${k}">Remove from follow-up</button></fieldset>`,
       )
       .join("") +
     fld("Closing note (optional)", "note", dr.note, 2) +
@@ -413,7 +466,10 @@ function final() {
   const t = (x) => x.trim();
   return {
     intro: t(dr.intro),
-    items: [...sel].map((k) => ({ k, n: R[k].n, d: t(dr.items[k].d), e: t(dr.items[k].e) })),
+    items: [...sel].map((k) => {
+      const r = catalog.get(k);
+      return { k, n: r.name, u: r.url, d: t(dr.items[k].d) };
+    }),
     note: t(dr.note),
   };
 }
@@ -423,7 +479,7 @@ function fuHtml(f) {
     f.items
       .map(
         (x) =>
-          `<div class="b"><b>${x.n}</b>${x.d ? "<br>" + nl(x.d) : ""}<br><a href="${L}" target="_blank" rel="noopener">Open program link</a>${x.e ? `<br><span class="mut">${nl(x.e)}</span>` : ""}</div>`,
+          `<div class="b"><b>${esc(x.n)}</b>${x.d ? "<br>" + nl(x.d) : ""}${x.u ? `<br><a href="${escAttr(x.u)}" target="_blank" rel="noopener">Open program link</a>` : ""}</div>`,
       )
       .join("") +
     (f.note ? `<div class="b">${nl(f.note)}</div>` : "")
@@ -446,57 +502,12 @@ function sendFollowUp() {
   if (!sel.size) return;
   mkDraft();
   const f = final();
-  sent = f.items;
   $("#mc").innerHTML = fuHtml(f);
   dr = null;
   closeRev();
-  $("#prevbox").textContent = "Sent (simulated) to the member follow-up chat.";
+  $("#prevbox").textContent = "Sent (simulated) as a one-way message to the member.";
   show("mb");
 }
-// Members choose from preset questions only; there is no free-text box in the member chat.
-function mq(q) {
-  if (!q) return;
-  let a;
-  const l = q.toLowerCase(),
-    named = (x) => (x.e ? x.n + " (" + x.e + ")" : x.n);
-  if (!sent.length) a = "Nothing has been shared yet.";
-  else if (/dose|stop|symptom|treat|pain|medicat/.test(l))
-    a =
-      "That is a clinical question. Please ask your care team. I can only explain the shared resources.";
-  else if (/approv|qualify|eligib|guarantee|will i/.test(l))
-    a =
-      "I can’t say whether you’ll qualify. The program decides after review. Items shared: " +
-      sent.map(named).join(" • ");
-  else if (/next|document/.test(l))
-    a = sent
-      .map((x) => x.n + ": " + (x.e ? x.e + " " : "") + "The program link is the place to start.")
-      .join(" • ");
-  else if (/what|how|explain|link/.test(l))
-    a = sent.map((x) => (x.d ? x.n + ": " + x.d : x.n)).join(" • ");
-  else
-    a =
-      "I can explain only the items your representative shared: " +
-      sent.map((x) => x.n).join(", ") +
-      ".";
-  $("#mc").insertAdjacentHTML(
-    "beforeend",
-    `<div class="b me">${esc(q)}</div><div class="b">${esc(a)}</div>`,
-  );
-  $("#mc").scrollTop = 1e5;
-}
-$("#mqs").innerHTML = [
-  "What is this?",
-  "Will I be approved?",
-  "What should I do next?",
-  "Do I need any documents?",
-  "Should I change my medication?",
-]
-  .map((q) => `<button class="chip">${q}</button>`)
-  .join("");
-$("#mqs").onclick = (e) => {
-  const b = e.target.closest("button");
-  if (b) mq(b.textContent);
-};
 $("#ai").onkeydown = (e) => e.key == "Enter" && $("#ask").click();
 function prof() {
   const p = $("#pf");

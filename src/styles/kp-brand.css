@@ -444,10 +444,6 @@ mark {
   color: var(--on-pri);
   border-radius: 12px 12px 2px 12px;
 }
-.chip {
-  background: var(--card);
-  border-radius: 999px;
-}
 .fl {
   border-radius: 4px;
 }
@@ -846,7 +842,24 @@ button.sm {
   border: 1px solid var(--bd);
 }
 
-/* ---------- Member chat: preset questions only ---------- */
-#mqs {
-  margin-top: 6px;
+/* ---------- Catalog data flags: a missing name or link is shown, never silently dropped ---------- */
+.flag {
+  color: var(--amb);
+  font-weight: 600;
+}
+.sug p.flag {
+  background: var(--ag);
+  border-radius: 6px;
+  padding: 6px 10px;
+}
+.sug b.flag {
+  color: var(--amb);
+}
+.sug p.lnk {
+  margin: 12px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--bd);
+}
+.sug p.lnk a {
+  font-weight: 600;
 }
