@@ -79,3 +79,18 @@ def test_input_limits(monkeypatch):
     assert c.post("/tag", json=big, headers=GOOD).status_code == 422
     many = {"transcript": [{"turn": k, "speaker": "member", "text": "x"} for k in range(61)]}
     assert c.post("/tag", json=many, headers=GOOD).status_code == 422
+
+
+def test_whitespace_around_the_code_does_not_matter(monkeypatch):
+    import importlib
+    monkeypatch.setenv("ADMIN_CODE", "  abc123\n")
+    m = importlib.reload(main)
+    try:
+        assert m.ADMIN_CODE == "abc123"
+        cl = TestClient(m.app)
+        assert cl.post("/auth", headers={"x-admin-code": "abc123"}).status_code == 200
+        assert cl.post("/auth", headers={"x-admin-code": " abc123 "}).status_code == 200
+        assert cl.post("/auth", headers={"x-admin-code": "abc12"}).status_code == 401
+    finally:
+        monkeypatch.delenv("ADMIN_CODE")
+        importlib.reload(main)

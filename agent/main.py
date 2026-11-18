@@ -10,7 +10,7 @@ VOCAB = json.loads((pathlib.Path(__file__).parent / "vocabulary.json").read_text
 MODEL = os.environ.get("MODEL", "gemini-3.8-flash")  # check the exact ID in the console model list
 # Access control. /tag costs money, so it is closed unless ADMIN_CODE is set (fail closed) and every call
 # must present it. The public website never calls this service; only the team's admin panel does.
-ADMIN_CODE = os.environ.get("ADMIN_CODE", "")
+ADMIN_CODE = os.environ.get("ADMIN_CODE", "").strip()  # the site trims what you type, so trim this too
 DAILY_LIMIT = int(os.environ.get("DAILY_LIMIT", "300"))  # model calls per UTC day, per running instance
 LOCK_AFTER, LOCK_SECONDS = 8, 600  # wrong codes allowed per client before it is locked out for a while
 ORIGINS = [o for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o]
@@ -109,7 +109,7 @@ def check_admin(request: Request, code: str) -> None:
     if len(recent) >= LOCK_AFTER:
         _fails[who] = recent
         raise HTTPException(429, "too many wrong codes, try again later")
-    if not hmac.compare_digest(code.encode("utf-8"), ADMIN_CODE.encode("utf-8")):
+    if not hmac.compare_digest(code.strip().encode("utf-8"), ADMIN_CODE.encode("utf-8")):
         if len(_fails) > 1000:
             _fails.clear()
         _fails[who] = recent + [now]
