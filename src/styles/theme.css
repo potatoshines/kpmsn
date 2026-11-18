@@ -1058,16 +1058,6 @@ header {
   padding-top: 20px;
   border-top: 1px solid var(--bd);
 }
-.chip {
-  border-radius: 999px;
-  background: var(--tile);
-  padding: 5px 12px;
-  font-size: 13px;
-  font-weight: 400;
-}
-#mqs {
-  margin: 6px 0 10px;
-}
 :root {
   --card: #fcfcfa;
   --tile: #f6f6f2;
