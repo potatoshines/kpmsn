@@ -1,0 +1,63 @@
+{
+  "transcript": [
+    {
+      "turn": 1,
+      "speaker": "Rep",
+      "text": "Thank you for calling Member Services. How can I help?"
+    },
+    {
+      "turn": 2,
+      "speaker": "Member",
+      "text": "Hi, I got a medical bill and I can’t afford the full amount right now."
+    },
+    {
+      "turn": 3,
+      "speaker": "Rep",
+      "text": "I’m sorry to hear that. Can you tell me more?"
+    },
+    {
+      "turn": 4,
+      "speaker": "Member",
+      "text": "It’s $412 and I’m struggling with rent this month too."
+    },
+    {
+      "turn": 5,
+      "speaker": "Member",
+      "text": "Is there a payment plan, monthly, so I can pay over time?"
+    },
+    {
+      "turn": 6,
+      "speaker": "Rep",
+      "text": "Let me look into options for you."
+    }
+  ],
+  "profile": {
+    "age_band": "40-49",
+    "languages": [
+      "Spanish",
+      "English"
+    ],
+    "plan_name": "Silver 70 HMO",
+    "plan_category": "hmo",
+    "balance": {
+      "outstanding": true,
+      "days_until_due": 21
+    },
+    "upcoming_appointment": {
+      "what": "Primary care follow-up",
+      "days_from_now": 28
+    },
+    "upcoming_procedure": null,
+    "active_medication_count": 1,
+    "recent_interactions": [
+      {
+        "topic": "Billing question about lab charge",
+        "days_ago": 25
+      },
+      {
+        "topic": "Address update",
+        "days_ago": 134
+      }
+    ]
+  }
+}

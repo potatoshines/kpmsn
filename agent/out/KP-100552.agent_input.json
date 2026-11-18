@@ -1,0 +1,49 @@
+{
+  "transcript": [
+    {
+      "turn": 1,
+      "speaker": "Rep",
+      "text": "Member Services, how can I help?"
+    },
+    {
+      "turn": 2,
+      "speaker": "Member",
+      "text": "I got a reminder about a checkup and I think my screening is overdue."
+    },
+    {
+      "turn": 3,
+      "speaker": "Member",
+      "text": "Also money is tight and groceries have gotten hard, is there any food help?"
+    },
+    {
+      "turn": 4,
+      "speaker": "Rep",
+      "text": "Let me look at what resources exist."
+    }
+  ],
+  "profile": {
+    "age_band": "60-69",
+    "languages": [
+      "English",
+      "Mandarin"
+    ],
+    "plan_name": "Gold 80 PPO",
+    "plan_category": "ppo",
+    "balance": {
+      "outstanding": false,
+      "days_until_due": null
+    },
+    "upcoming_appointment": {
+      "what": "Annual checkup",
+      "days_from_now": 34
+    },
+    "upcoming_procedure": null,
+    "active_medication_count": 1,
+    "recent_interactions": [
+      {
+        "topic": "Provider directory question",
+        "days_ago": 43
+      }
+    ]
+  }
+}

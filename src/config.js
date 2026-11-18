@@ -4,8 +4,8 @@
 // This file is public in a static site, so `secret` is not a real secret: it only keeps casual traffic
 // out. The limits that actually cap cost are the Cloud Run max instances and the maxCalls below.
 export const AGENT = {
-  url: "", // e.g. "https://tag-agent-326624205371.us-central1.run.app"
-  secret: "", // the APP_SECRET set on the Cloud Run service
+  url: "https://tag-agent-326624205371.us-central1.run.app",
+  secret: "b997b1c49e24996ec2633bafb8aead4315142c6a9bb1e379", // the APP_SECRET set on the Cloud Run service
   timeoutMs: 8000, // give up and use the keyword rules after this long
   maxCalls: 150, // agent calls allowed per page load; after that the keyword rules are used
   contextLines: 2, // earlier lines sent along with the new member line, for meaning only
