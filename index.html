@@ -15,6 +15,7 @@
     <link rel="stylesheet" href="src/styles/base.css" />
     <link rel="stylesheet" href="src/styles/theme.css" />
     <link rel="stylesheet" href="src/styles/kp-brand.css" />
+    <link rel="stylesheet" href="src/styles/admin.css" />
   </head>
   <body>
     <header>
@@ -37,7 +38,45 @@
       >
         Prototype · fictional data
       </div>
+      <button class="admbtn" id="admbtn" aria-expanded="false" aria-controls="adm">🔒 Admin</button>
     </header>
+    <div id="adm" class="adm hide" role="region" aria-label="Admin console">
+      <div class="adm-h">
+        <span class="adm-dot" aria-hidden="true"></span><b>ADMIN CONSOLE</b>
+        <button class="adm-x" id="admclose" aria-label="Close admin console">✕</button>
+      </div>
+      <form id="admlock" class="adm-b">
+        <p class="adm-t">
+          Live agent calls cost credits. Enter the admin code to unlock the testing tools.
+        </p>
+        <label
+          >Access code <input id="admcode" type="password" autocomplete="off" spellcheck="false"
+        /></label>
+        <button class="adm-go" id="admgo" type="submit">Unlock</button>
+        <p id="admmsg" class="adm-m" role="alert"></p>
+      </form>
+      <div id="admon" class="adm-b hide">
+        <p class="adm-t">
+          <b class="adm-ok">● Unlocked.</b> Testing tools are now visible on the workspace.
+        </p>
+        <div class="adm-meter">
+          <span id="admmeterT">Agent calls today: not used yet</span>
+          <progress id="admmeter" value="0" max="1" hidden></progress>
+        </div>
+        <label
+          >Run mode
+          <select id="amode">
+            <option value="recorded">Recorded replay (free)</option>
+            <option value="live">Live agent (costs credits)</option>
+          </select></label
+        >
+        <div class="row">
+          <button id="asave" disabled>Save this run</button>
+          <span id="asavemsg" class="adm-m" role="status" aria-live="polite"></span>
+        </div>
+        <button class="adm-lk" id="alock" type="button">Lock</button>
+      </div>
+    </div>
     <main>
       <section id="ws">
         <p class="eb">Overview / Active call</p>
@@ -58,21 +97,29 @@
         <div class="card">
           <h2>Call transcript</h2>
           <div class="row">
-            <button class="p" id="play">▶ Play</button><button id="step">Step</button
-            ><button id="rst">Reset</button>
-            <label
+            <button class="p rec" id="play" aria-pressed="false">● Recording</button
+            ><span class="simb" id="simb" role="status" aria-live="polite"></span
+            ><button class="adm-only" id="step">Step</button
+            ><button class="adm-only" id="rst">Reset</button>
+            <label class="adm-only"
               >Sample file
               <select id="samp"></select></label
-            ><label>or load .txt <input type="file" id="file" accept=".txt" /></label>
+            ><label class="adm-only"
+              >or load .txt <input type="file" id="file" accept=".txt"
+            /></label>
           </div>
-          <p class="mut">
-            Text files: one line per turn, as “Rep: …” or “Member: …”. Loaded text is analyzed by
-            the same keyword rules (simulated).
+          <p class="mut pub-only">
+            This is a simulated call. It replays a recorded run of the AI tagging agent on a
+            fictional member. Nothing you do here is sent anywhere.
+          </p>
+          <p class="mut adm-only">
+            Text files: one line per turn, as “Rep: …” or “Member: …”. In Live agent mode each
+            Member line is sent to the agent and costs credits.
           </p>
           <p class="err" id="ferr" role="alert"></p>
           <p class="mut" id="agentst" role="status" aria-live="polite"></p>
           <div id="tr" aria-live="polite" tabindex="0">
-            <span class="mut">No transcript yet. Look up a member, then press Play.</span>
+            <span class="mut">No transcript yet. Look up a member, then press Recording.</span>
           </div>
         </div>
         <div class="card">

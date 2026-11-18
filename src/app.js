@@ -1,14 +1,22 @@
 // Member Service Navigator: workspace, profile and the one-way member follow-up message.
-// Member lines are tagged by the tagging agent (agent-client.js, settings in config.js); with no agent
-// configured, or when it cannot be reached, the keyword rules in data/tag-rules.js answer instead.
-// Resources come from data/kp_resource_opportunity_catalog.csv.
+// Two ways to run a call:
+//  - Public (default): the one Recording button replays a RECORDED run of the real agent
+//    (src/data/recorded/<member>.json, see recorded.js). Nothing is sent to the agent, so it is free.
+//  - Admin (server-checked code, see admin.js): live agent calls on any transcript, plus saving a clean
+//    live run as a new recorded run. Live calls cost credits.
+// If the agent cannot be reached the keyword rules in data/tag-rules.js answer instead. Resources
+// come from data/kp_resource_opportunity_catalog.csv.
 import { M, SC } from "./data/members.js";
 import { loadCatalog, emptyCatalog, matchTags, normTag, humanTag } from "./data/catalog.js";
 import { RULES, tagLine, tagProfile, tagText, recordContext } from "./data/tag-rules.js";
 import { esc, escAttr, nameOf, isFlagged, cardParts } from "./card.js";
 import { createAgent } from "./agent-client.js";
+import { createAdmin } from "./admin.js";
+import { loadRun, runItems, buildRun } from "./recorded.js";
 
-const agent = createAgent();
+let adminCode = "";
+const agent = createAgent({ getCode: () => adminCode });
+let admin; // created at the end of this file
 let m = null,
   i = 0,
   tm = null,
@@ -99,7 +107,8 @@ function line() {
   if (!m || i >= txt.length) {
     clearInterval(tm);
     tm = null;
-    $("#play").textContent = "▶ Play";
+    setPlay(false);
+    updateSave();
     return;
   }
   const [w, t] = txt[i++];
@@ -107,8 +116,57 @@ function line() {
   $("#tr").insertAdjacentHTML("beforeend", `<p class="ln"><b>${w}:</b> ${hl(t)}</p>`);
   $("#tr").scrollTop = 1e5;
   if (w == "Member") {
-    queueTagging(t);
+    if (live()) queueTagging(t);
+    else if (rec) {
+      applyTags(runItems(rec, i));
+      draw();
+    }
   }
+  if (i >= txt.length) updateSave();
+}
+// Live or recorded? Live needs the unlocked admin console with "Live agent" selected.
+const live = () => !!admin && admin.unlocked && admin.mode === "live";
+let rec = null, // the recorded run being replayed
+  recTxt = null,
+  loadingRec = false,
+  runLog = {}, // live run: line number -> tags the agent returned
+  runClean = true, // false as soon as one line was tagged by the fallback rules
+  pending = 0;
+function setPlay(on) {
+  const b = $("#play");
+  b.textContent = live() ? (on ? "❚❚ Pause" : "▶ Play (live agent)") : "● Recording";
+  b.classList.toggle("rec", !live());
+  b.classList.toggle("on", !!on && !live());
+  b.setAttribute("aria-pressed", String(!!on));
+  const sb = $("#simb");
+  sb.className = "simb" + (on ? " on" : "");
+  sb.textContent = live()
+    ? "Live agent · each Member line costs credits"
+    : on
+      ? "Simulating a call · replaying a recorded agent run"
+      : "Press Recording to simulate a call.";
+}
+function updateSave() {
+  if (!admin) return;
+  const members = txt.map((l, k) => (l[0] === "Member" ? k + 1 : 0)).filter(Boolean);
+  let why = "";
+  if (!live()) why = "Switch to Live agent to record a run.";
+  else if (!m) why = "Look up a member first.";
+  else if (!txt.length || i < txt.length || pending) why = "Play the whole call to the end first.";
+  else if (!runClean)
+    why =
+      "Some lines used the fallback rules, so this is not a pure agent run. Reset and run again.";
+  else if (!members.every((n) => runLog[n])) why = "Some Member lines have no agent result yet.";
+  admin.setSave(!why, why || `Ready: downloads ${m.id}.json for src/data/recorded/.`);
+}
+function download(name, text) {
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([text], { type: "application/json" }));
+  a.download = name;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
 }
 // Member lines go to the agent one at a time, in order, so cards keep the first line that produced
 // them. `gen` changes on every reset, so a slow answer for an old transcript is dropped.
@@ -118,23 +176,40 @@ const STATUS = {
   agent: "Tagging: Gemini agent",
   rules: "Tagging: simulated keyword rules",
   fallback: "Tagging: keyword rules (agent unavailable for some lines)",
+  unauthorized: "Tagging: keyword rules (the server refused the admin code)",
+  limit: "Tagging: keyword rules (agent call limit reached)",
 };
 function queueTagging(t) {
   const g = gen,
     mm = m,
     turn = i,
     lines = txt.slice(0, i);
+  pending++;
   chain = chain
     .then(() => agent.tagMemberLine(lines, turn, mm))
-    .then(({ items, mode }) => {
+    .then(({ items, mode, reason }) => {
       if (g !== gen) return;
+      pending--;
+      if (mode === "agent") runLog[turn] = items.map((x) => x.tag);
+      else runClean = false;
       applyTags(items);
       const st = $("#agentst");
       if (st && (mode === "fallback" || !st.dataset.mode || st.dataset.mode === "agent"))
-        ((st.dataset.mode = mode), (st.textContent = STATUS[mode]));
+        ((st.dataset.mode = mode),
+          (st.textContent = (mode === "fallback" && STATUS[reason]) || STATUS[mode]));
       draw();
+      admin.refreshMeter();
+      updateSave();
+      if (reason === "unauthorized")
+        admin.lock("The server no longer accepts the admin code. Unlock again.");
     })
-    .catch((e) => console.warn("Tagging failed:", e));
+    .catch((e) => {
+      console.warn("Tagging failed:", e);
+      if (g === gen) {
+        pending = Math.max(0, pending - 1);
+        runClean = false;
+      }
+    });
 }
 // The seam for the tagging agent. `items` is what the agent returns:
 //   [{ tag, source: "transcript" | "profile", turn?, evidence }]
@@ -223,8 +298,11 @@ $("#sugs").onclick = (e) => {
 function clr() {
   gen++;
   i = 0;
+  runLog = {};
+  runClean = true;
+  pending = 0;
   const st = $("#agentst");
-  if (st) ((st.dataset.mode = ""), (st.textContent = agent.enabled ? "" : STATUS.rules));
+  if (st) ((st.dataset.mode = ""), (st.textContent = live() && !agent.enabled ? STATUS.rules : ""));
   sug = {};
   sel = new Set();
   dr = null;
@@ -235,13 +313,14 @@ function clr() {
 function rst() {
   clearInterval(tm);
   tm = null;
-  $("#play").textContent = "▶ Play";
+  setPlay(false);
   $("#ferr").textContent = "";
   $("#prevbox").textContent = "";
   if (m) txt = m.tr.slice();
   clr();
   draw();
   $("#tr").innerHTML = '<span class="mut">Transcript reset.</span>';
+  updateSave();
 }
 $("#find").onclick = find;
 $("#mock").innerHTML =
@@ -267,8 +346,11 @@ $("#mock").onclick = (e) => {
   }
 };
 $("#rst").onclick = rst;
-$("#step").onclick = () => (m ? line() : ($("#ferr").textContent = "Look up a member first."));
-$("#play").onclick = () => {
+$("#step").onclick = () => {
+  if (!live()) return;
+  m ? line() : ($("#ferr").textContent = "Look up a member first.");
+};
+$("#play").onclick = async () => {
   if (!m) {
     $("#ferr").textContent = "Look up a member first.";
     return;
@@ -276,13 +358,43 @@ $("#play").onclick = () => {
   if (tm) {
     clearInterval(tm);
     tm = null;
-    $("#play").textContent = "▶ Play";
-  } else {
-    $("#play").textContent = "❚❚ Pause";
-    tm = setInterval(line, 1600);
+    setPlay(false);
+    return;
   }
+  if (!live()) {
+    if (loadingRec) return;
+    if (!rec || rec.member !== m.id) {
+      loadingRec = true;
+      const r = await loadRun(m.id);
+      loadingRec = false;
+      if (!r.ok) {
+        rec = null;
+        $("#ferr").textContent =
+          r.error + (r.missing ? " An admin needs to record one from the admin console." : "");
+        return;
+      }
+      rec = r.run;
+    }
+    $("#ferr").textContent = "";
+    if (txt !== recTxt || i === 0 || i >= txt.length) {
+      txt = recTxt = rec.transcript.map((l) => [...l]);
+      clr();
+      draw();
+      $("#tr").innerHTML = "";
+      const st = $("#agentst");
+      st.dataset.mode = "recorded";
+      st.textContent = `Tagging: recorded agent run${rec.model ? " (" + rec.model + ")" : ""}, ${rec.recordedAt.slice(0, 10)}`;
+    }
+  }
+  setPlay(true);
+  tm = setInterval(line, 1600);
 };
 $("#samp").onchange = (e) => {
+  if (!live()) {
+    $("#ferr").textContent =
+      "Switch to Live agent mode in the admin console to use another transcript.";
+    return;
+  }
   if (!m) {
     $("#ferr").textContent = "Look up a member first.";
     return;
@@ -302,6 +414,10 @@ $("#file").onchange = (e) => {
   const f = e.target.files[0];
   $("#ferr").textContent = "";
   if (!f) return;
+  if (!live()) {
+    $("#ferr").textContent = "Switch to Live agent mode in the admin console to load a transcript.";
+    return;
+  }
   if (!m) {
     $("#ferr").textContent = "Look up a member first.";
     return;
@@ -561,3 +677,27 @@ function prof() {
     `</div></div>`;
 }
 prof();
+
+// The admin console is created last so everything it calls back into already exists.
+admin = createAdmin({
+  agent,
+  setCode: (c) => (adminCode = c),
+  onChange: () => {
+    rec = null;
+    if (m) rst();
+    else setPlay(false);
+    updateSave();
+  },
+});
+admin.onSave(() => {
+  const r = buildRun({
+    member: m.id,
+    transcript: txt.map((l) => [...l]),
+    tagsByTurn: runLog,
+    model: agent.budget?.model,
+  });
+  if (!r.ok) return admin.setSave(false, "Could not save: " + r.error);
+  download(`${m.id}.json`, r.json);
+  admin.setSave(true, `Downloaded ${m.id}.json. Put it in src/data/recorded/ and commit it.`);
+});
+setPlay(false);

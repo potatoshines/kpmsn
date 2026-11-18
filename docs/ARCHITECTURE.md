@@ -39,13 +39,19 @@ Cells that are blank, `N/A`, `null`, `nan` or `none` count as empty. A flagged c
 
 ## The tagging agent
 
-Member lines are tagged by the agent service in `agent/` (Cloud Run, Gemini). `src/agent-client.js` calls it; settings live in `src/config.js` (`url`, `secret`, `timeoutMs`, `maxCalls`, `contextLines`). With `url` empty the keyword rules in `src/data/tag-rules.js` are used, so a fresh clone and the tests run with no cloud setup.
+Member lines are tagged by the agent service in `agent/` (Cloud Run, Gemini). Two ways a call runs:
 
-- **What is sent:** each new Member line plus up to `contextLines` earlier lines, as `{ turn, speaker, text }`, with the member's name, ID, phone, date of birth and address (and any phone number or email in the words) replaced by `[removed]` first. Representative lines are never tagged.
-- **What comes back:** `{ items: [{ tag, source, turn, evidence }] }`. The client keeps only tags for the new line, normalizes them (`normTag`), and uses the real line as the evidence. The service itself drops any tag outside the catalog vocabulary.
+- **Public (default): recorded replay.** `src/recorded.js` loads `src/data/recorded/<member>.json`, a saved real agent run, validates it, and `app.js` feeds each Member line's saved tags to `applyTags`. Nothing is sent to the agent. Cards are recomputed from the tags and the current catalog.
+- **Admin: live agent.** `src/admin.js` unlocks only when `POST /auth` accepts the admin code (checked by the server; the code lives only in the tab's `sessionStorage`). Live mode sends each Member line through `src/agent-client.js`, with the code in the `x-admin-code` header. A clean, complete live run can be saved as a new recorded run.
+
+Settings are in `src/config.js` (`url`, `timeoutMs`, `maxCalls`, `contextLines`); there is no secret. With `url` empty the keyword rules in `src/data/tag-rules.js` are used, so a fresh clone and the tests run with no cloud setup.
+
+- **What is sent (live):** each new Member line plus up to `contextLines` earlier lines, as `{ turn, speaker, text }`, with the member's name, ID, phone, date of birth and address (and any phone number or email in the words) replaced by `[removed]` first. Representative lines are never tagged.
+- **What comes back:** `{ items: [{ tag, source, turn, evidence }], remaining, limit, model }`. The client keeps only tags for the new line, normalizes them (`normTag`), and uses the real line as the evidence. The service drops any tag outside the catalog vocabulary.
+- **Server gate:** every `/tag` and `/auth` call must carry the code (`ADMIN_CODE`, compared in constant time); no code configured means the service refuses everything; repeated wrong codes lock the client out; `DAILY_LIMIT` caps model calls per UTC day per instance (in memory, so it resets on restart).
 - **Profile tags** (`tagProfile`) always come from local rules: they read structured fields, so they need no model and no member data leaves the browser.
-- **Failure handling:** a network error, non-200 reply, bad reply, timeout or `maxCalls` reached falls back to the keyword rules for that line, and a status line under the transcript says which tagger is in use. Identical lines are cached for the page load.
-- **Order:** calls run one at a time so cards keep the first line that produced them; answers for a transcript that has since been reset are dropped.
+- **Failure handling (live):** a network error, bad reply, timeout, refused code or reached limit falls back to the keyword rules for that line, and the status line says why. A run with any fallback line cannot be saved as a recorded run. If the server stops accepting the code the console locks itself.
+- **Order:** live calls run one at a time so cards keep the first line that produced them; answers for a transcript that has since been reset are dropped.
 
 Tags use this shape either way:
 

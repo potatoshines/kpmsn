@@ -1,13 +1,18 @@
 """Tagging agent service: transcript + curated profile in, closed-vocabulary tags out.
 The model never sees the catalog and never decides eligibility; it only returns tags with evidence."""
-import json, logging, os, pathlib, re
-from fastapi import FastAPI, Header, HTTPException
+import hmac, json, logging, os, pathlib, re, time
+from datetime import datetime, timezone
+from fastapi import FastAPI, Header, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
 
 VOCAB = json.loads((pathlib.Path(__file__).parent / "vocabulary.json").read_text())
 MODEL = os.environ.get("MODEL", "gemini-3.8-flash")  # check the exact ID in the console model list
-SECRET = os.environ.get("APP_SECRET", "")
+# Access control. /tag costs money, so it is closed unless ADMIN_CODE is set (fail closed) and every call
+# must present it. The public website never calls this service; only the team's admin panel does.
+ADMIN_CODE = os.environ.get("ADMIN_CODE", "")
+DAILY_LIMIT = int(os.environ.get("DAILY_LIMIT", "300"))  # model calls per UTC day, per running instance
+LOCK_AFTER, LOCK_SECONDS = 8, 600  # wrong codes allowed per client before it is locked out for a while
 ORIGINS = [o for o in os.environ.get("ALLOWED_ORIGINS", "").split(",") if o]
 MAX_TURNS, MAX_CHARS = 60, 600
 
@@ -49,12 +54,6 @@ _client = None
 _THINK = [dict(thinking_level="MINIMAL"), dict(thinking_level="LOW"), dict(thinking_budget=0), None]
 _think_ok = None  # index of the first thinking setting the model accepted
 
-_THINK = [dict(thinking_level="MINIMAL"), dict(thinking_level="LOW"), dict(thinking_budget=0), None]
-_think_ok = None  # index of the first thinking setting the model accepted
-
-_THINK = [dict(thinking_level="MINIMAL"), dict(thinking_level="LOW"), dict(thinking_budget=0), None]
-_think_ok = None  # index of the first thinking setting the model accepted
-
 def call_model(prompt: str) -> str:
     """The only function that talks to Google. Tests replace it."""
     global _client, _think_ok
@@ -85,13 +84,53 @@ def call_model(prompt: str) -> str:
         return r.text
     raise last
 
+# In-memory counters: best effort. They reset when the instance restarts (it scales to zero when idle),
+# so they are a second layer. The first layer is the admin code; the hard limits are the Cloud Run
+# max-instances setting and the Google Cloud budget and quotas.
+_used = {"day": "", "n": 0}
+_fails: dict[str, list[float]] = {}
+
+def _client_id(request: Request) -> str:
+    fwd = request.headers.get("x-forwarded-for", "")
+    # the last entry is the address Google's front end saw; earlier entries can be faked by the caller
+    return (fwd.split(",")[-1].strip() or (request.client.host if request.client else "?"))[:64]
+
+def _remaining() -> int:
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if _used["day"] != today:
+        _used.update(day=today, n=0)
+    return max(0, DAILY_LIMIT - _used["n"])
+
+def check_admin(request: Request, code: str) -> None:
+    if not ADMIN_CODE:
+        raise HTTPException(503, "agent is not configured")
+    who, now = _client_id(request), time.time()
+    recent = [t for t in _fails.get(who, []) if now - t < LOCK_SECONDS]
+    if len(recent) >= LOCK_AFTER:
+        _fails[who] = recent
+        raise HTTPException(429, "too many wrong codes, try again later")
+    if not hmac.compare_digest(code.encode("utf-8"), ADMIN_CODE.encode("utf-8")):
+        if len(_fails) > 1000:
+            _fails.clear()
+        _fails[who] = recent + [now]
+        raise HTTPException(401, "wrong admin code")
+    _fails.pop(who, None)
+
+@app.post("/auth")
+def auth(request: Request, x_admin_code: str = Header(default="")):
+    """Checks the code without spending anything; the admin panel uses it to unlock."""
+    check_admin(request, x_admin_code)
+    return {"ok": True, "remaining": _remaining(), "limit": DAILY_LIMIT, "model": MODEL}
+
 @app.get("/health")
 def healthz(): return {"ok": True, "tags": len(VOCAB)}
 
 @app.post("/tag")
-def tag(req: Req, x_app_secret: str = Header(default="")):
-    if SECRET and x_app_secret != SECRET:
-        raise HTTPException(401, "bad secret")
+def tag(req: Req, request: Request, x_admin_code: str = Header(default="")):
+    check_admin(request, x_admin_code)
+    if _remaining() <= 0:
+        raise HTTPException(429, "daily limit reached")
+    _used["n"] += 1
     prompt = json.dumps({"transcript": [t.model_dump() for t in req.transcript], "profile": req.profile})
     try:
         data = json.loads(call_model(prompt))
@@ -105,4 +144,4 @@ def tag(req: Req, x_app_secret: str = Header(default="")):
             items.append({**i, "tag": t})
         else:
             logging.warning("dropped tag %r", i.get("tag"))
-    return {"items": items}
+    return {"items": items, "remaining": _remaining(), "limit": DAILY_LIMIT, "model": MODEL}
