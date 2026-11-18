@@ -4,3 +4,8 @@ node_modules
 
 # Licensed fonts: keep local
 src/assets/fonts/
+
+# Agent build output and caches
+agent/out/
+__pycache__/
+.pytest_cache/
