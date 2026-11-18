@@ -4,6 +4,16 @@
 //
 // Unlocked state lives in this tab only (sessionStorage), so closing the tab locks it again.
 const KEY = "kp_admin_code";
+const svg = (body) =>
+  `<svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${body}</svg>`;
+const ICON = {
+  shut: svg(
+    '<rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 5 0v2"/>',
+  ),
+  open: svg(
+    '<rect x="3" y="7" width="10" height="7" rx="1.5"/><path d="M5.5 7V5a2.5 2.5 0 0 1 4.8-1"/>',
+  ),
+};
 const mem = { v: "" };
 const store = {
   get() {
@@ -40,7 +50,8 @@ export function createAdmin({ agent, setCode, onChange = () => {}, doc = documen
 
   function paint() {
     doc.body.classList.toggle("is-admin", unlocked);
-    $("#admbtn").textContent = unlocked ? "🔓 Admin" : "🔒 Admin";
+    $("#admbtn").innerHTML = unlocked ? ICON.open : ICON.shut;
+    $("#admbtn").title = $("#admbtn").ariaLabel = unlocked ? "Admin (unlocked)" : "Admin";
     $("#admlock").classList.toggle("hide", unlocked);
     $("#admon").classList.toggle("hide", !unlocked);
     $("#adm").classList.toggle("live", unlocked && mode === "live");

@@ -1,121 +1,119 @@
-/* Admin console and public/admin visibility. Admin-only controls stay hidden until the server accepts
-   the admin code (body.is-admin). */
 body:not(.is-admin) .adm-only,
 body.is-admin .pub-only {
   display: none !important;
 }
+/* A small, quiet lock in the top-right corner. It is out of the layout (fixed), so it never changes the
+   size of the header or the notice bar. */
 .admbtn {
-  margin-left: auto;
+  position: fixed;
+  top: 7px;
+  right: 10px;
+  z-index: 60;
+  box-sizing: border-box;
+  width: 26px;
+  height: 26px;
+  min-width: 0;
+  min-height: 0;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  place-items: center;
   background: transparent;
-  color: inherit;
-  border: 1px solid currentColor;
-  border-radius: 999px;
-  padding: 4px 12px;
-  font:
-    600 12px/1 ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    monospace;
-  opacity: 0.75;
+  border: 0;
+  border-radius: 6px;
+  color: #fff;
+  line-height: 1;
+  opacity: 0.5;
   cursor: pointer;
+  transition: opacity 0.15s;
 }
 .admbtn:hover,
 .admbtn:focus-visible,
 .admbtn[aria-expanded="true"] {
   opacity: 1;
+  background: rgba(255, 255, 255, 0.14);
 }
+.admbtn:focus-visible {
+  outline: 2px solid #fff;
+  outline-offset: 1px;
+}
+/* Small, quiet card under the lock. Uses the page's own colours. */
 .adm {
   position: fixed;
-  top: 64px;
-  right: 16px;
-  z-index: 50;
-  width: min(360px, calc(100vw - 32px));
-  background: #0b1020;
-  color: #d7e1ff;
-  border: 1px solid #27325a;
-  border-radius: 12px;
-  box-shadow:
-    0 0 0 1px #0b1020,
-    0 12px 40px rgba(0, 0, 0, 0.45),
-    0 0 32px rgba(61, 220, 151, 0.12);
-  font:
-    13px/1.45 ui-monospace,
-    SFMono-Regular,
-    Menlo,
-    monospace;
+  top: 38px;
+  right: 10px;
+  z-index: 60;
+  width: min(250px, calc(100vw - 20px));
+  background: var(--card, #fff);
+  color: var(--tx, #1b2a38);
+  border: 1px solid var(--bd, #d5dde5);
+  border-radius: 8px;
+  box-shadow: 0 6px 20px rgba(0, 20, 50, 0.14);
+  font-size: 12px;
+  line-height: 1.4;
 }
 .adm.hide {
   display: none;
 }
 .adm.live {
-  border-color: #ff6b6b;
-  box-shadow:
-    0 12px 40px rgba(0, 0, 0, 0.45),
-    0 0 32px rgba(255, 107, 107, 0.25);
-}
-.adm.low .adm-meter progress::-webkit-progress-value {
-  background: #ff6b6b;
+  border-color: #c62828;
 }
 .adm-h {
   display: flex;
   align-items: center;
-  gap: 8px;
-  padding: 10px 12px;
-  border-bottom: 1px solid #27325a;
-  letter-spacing: 0.12em;
+  padding: 6px 8px 6px 10px;
+  border-bottom: 1px solid var(--bd, #d5dde5);
   font-size: 11px;
-}
-.adm-dot {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: #3ddc97;
-  box-shadow: 0 0 10px #3ddc97;
-  animation: admpulse 2s ease-in-out infinite;
-}
-.adm.live .adm-dot {
-  background: #ff6b6b;
-  box-shadow: 0 0 10px #ff6b6b;
+  color: var(--mut, #5b6b7a);
 }
 .adm-x {
   margin-left: auto;
+  min-height: 0;
+  height: auto;
+  min-width: 0;
   background: none;
   border: 0;
   color: inherit;
   cursor: pointer;
-  font-size: 14px;
+  padding: 0 4px;
+  font-size: 12px;
 }
 .adm-b {
   display: grid;
-  gap: 10px;
-  padding: 12px;
+  gap: 8px;
+  padding: 10px;
 }
 .adm-b.hide {
   display: none;
 }
 .adm label {
   display: grid;
-  gap: 4px;
-  color: #9fb0e0;
+  gap: 3px;
+  color: var(--mut, #5b6b7a);
   font-size: 11px;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
 }
 .adm input,
 .adm select {
-  background: #121a33;
-  color: #d7e1ff;
-  border: 1px solid #27325a;
-  border-radius: 6px;
-  padding: 8px;
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 0;
+  height: 28px;
+  background: var(--card, #fff);
+  color: var(--tx, #1b2a38);
+  border: 1px solid var(--bd, #d5dde5);
+  border-radius: 5px;
+  padding: 5px 7px;
   font: inherit;
 }
 .adm button:not(.adm-x) {
-  background: #1a2547;
-  color: #d7e1ff;
-  border: 1px solid #34437a;
-  border-radius: 6px;
-  padding: 8px 10px;
+  min-height: 0;
+  height: 28px;
+  width: auto;
+  background: var(--card, #fff);
+  color: var(--tx, #1b2a38);
+  border: 1px solid var(--bd, #d5dde5);
+  border-radius: 5px;
+  padding: 5px 9px;
   font: inherit;
   cursor: pointer;
 }
@@ -123,49 +121,62 @@ body.is-admin .pub-only {
   opacity: 0.45;
   cursor: not-allowed;
 }
-.adm .adm-go {
-  background: #3ddc97;
-  color: #06241a;
-  border-color: #3ddc97;
-  font-weight: 700;
+.adm button.adm-go {
+  background: #003b71;
+  border-color: #003b71;
+  color: #fff;
 }
 .adm-t,
 .adm-m {
   margin: 0;
 }
 .adm-m {
-  color: #ffb4b4;
-  min-height: 1em;
+  color: #b3261e;
+  min-height: 0;
+}
+.adm-m:empty {
+  display: none;
+}
+.adm .row .adm-m {
+  color: var(--mut, #5b6b7a);
+  font-size: 11px;
+  display: inline;
 }
 .adm-ok {
-  color: #3ddc97;
+  color: #1e7a46;
+}
+.adm-meter {
+  color: var(--mut, #5b6b7a);
+  font-size: 11px;
 }
 .adm-meter progress {
   width: 100%;
-  height: 8px;
-  margin-top: 4px;
-  accent-color: #3ddc97;
+  height: 5px;
+  margin-top: 3px;
+  accent-color: #003b71;
+}
+.adm.low .adm-meter progress {
+  accent-color: #c62828;
 }
 .adm .row {
   display: flex;
   flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
+  gap: 6px;
 }
-.adm .row .adm-m {
-  color: #9fb0e0;
-  font-size: 11px;
+.adm button.adm-lk {
+  justify-self: start;
+  height: auto;
+  border-color: transparent;
+  color: var(--mut, #5b6b7a);
+  padding-left: 0;
+  text-decoration: underline;
 }
 .adm button:focus-visible,
 .adm input:focus-visible,
 .adm select:focus-visible {
-  outline: 2px solid #3ddc97;
-  outline-offset: 2px;
-}
-@keyframes admpulse {
-  50% {
-    opacity: 0.35;
-  }
+  outline: 2px solid #003b71;
+  outline-offset: 1px;
 }
 /* The one public control. */
 #play.rec.on {
@@ -188,7 +199,6 @@ body.is-admin .pub-only {
   }
 }
 @media (prefers-reduced-motion: reduce) {
-  .adm-dot,
   #play.rec.on {
     animation: none;
   }
