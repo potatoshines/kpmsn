@@ -1,0 +1,195 @@
+/* Admin console and public/admin visibility. Admin-only controls stay hidden until the server accepts
+   the admin code (body.is-admin). */
+body:not(.is-admin) .adm-only,
+body.is-admin .pub-only {
+  display: none !important;
+}
+.admbtn {
+  margin-left: auto;
+  background: transparent;
+  color: inherit;
+  border: 1px solid currentColor;
+  border-radius: 999px;
+  padding: 4px 12px;
+  font:
+    600 12px/1 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+  opacity: 0.75;
+  cursor: pointer;
+}
+.admbtn:hover,
+.admbtn:focus-visible,
+.admbtn[aria-expanded="true"] {
+  opacity: 1;
+}
+.adm {
+  position: fixed;
+  top: 64px;
+  right: 16px;
+  z-index: 50;
+  width: min(360px, calc(100vw - 32px));
+  background: #0b1020;
+  color: #d7e1ff;
+  border: 1px solid #27325a;
+  border-radius: 12px;
+  box-shadow:
+    0 0 0 1px #0b1020,
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    0 0 32px rgba(61, 220, 151, 0.12);
+  font:
+    13px/1.45 ui-monospace,
+    SFMono-Regular,
+    Menlo,
+    monospace;
+}
+.adm.hide {
+  display: none;
+}
+.adm.live {
+  border-color: #ff6b6b;
+  box-shadow:
+    0 12px 40px rgba(0, 0, 0, 0.45),
+    0 0 32px rgba(255, 107, 107, 0.25);
+}
+.adm.low .adm-meter progress::-webkit-progress-value {
+  background: #ff6b6b;
+}
+.adm-h {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #27325a;
+  letter-spacing: 0.12em;
+  font-size: 11px;
+}
+.adm-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #3ddc97;
+  box-shadow: 0 0 10px #3ddc97;
+  animation: admpulse 2s ease-in-out infinite;
+}
+.adm.live .adm-dot {
+  background: #ff6b6b;
+  box-shadow: 0 0 10px #ff6b6b;
+}
+.adm-x {
+  margin-left: auto;
+  background: none;
+  border: 0;
+  color: inherit;
+  cursor: pointer;
+  font-size: 14px;
+}
+.adm-b {
+  display: grid;
+  gap: 10px;
+  padding: 12px;
+}
+.adm-b.hide {
+  display: none;
+}
+.adm label {
+  display: grid;
+  gap: 4px;
+  color: #9fb0e0;
+  font-size: 11px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+.adm input,
+.adm select {
+  background: #121a33;
+  color: #d7e1ff;
+  border: 1px solid #27325a;
+  border-radius: 6px;
+  padding: 8px;
+  font: inherit;
+}
+.adm button:not(.adm-x) {
+  background: #1a2547;
+  color: #d7e1ff;
+  border: 1px solid #34437a;
+  border-radius: 6px;
+  padding: 8px 10px;
+  font: inherit;
+  cursor: pointer;
+}
+.adm button:not(.adm-x):disabled {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+.adm .adm-go {
+  background: #3ddc97;
+  color: #06241a;
+  border-color: #3ddc97;
+  font-weight: 700;
+}
+.adm-t,
+.adm-m {
+  margin: 0;
+}
+.adm-m {
+  color: #ffb4b4;
+  min-height: 1em;
+}
+.adm-ok {
+  color: #3ddc97;
+}
+.adm-meter progress {
+  width: 100%;
+  height: 8px;
+  margin-top: 4px;
+  accent-color: #3ddc97;
+}
+.adm .row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+.adm .row .adm-m {
+  color: #9fb0e0;
+  font-size: 11px;
+}
+.adm button:focus-visible,
+.adm input:focus-visible,
+.adm select:focus-visible {
+  outline: 2px solid #3ddc97;
+  outline-offset: 2px;
+}
+@keyframes admpulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+/* The one public control. */
+#play.rec.on {
+  background: #c62828;
+  border-color: #c62828;
+  color: #fff;
+  animation: recpulse 1.4s ease-in-out infinite;
+}
+.simb {
+  font-size: 13px;
+  color: var(--mut, #5b6b7a);
+}
+.simb.on {
+  color: #c62828;
+  font-weight: 600;
+}
+@keyframes recpulse {
+  50% {
+    box-shadow: 0 0 0 6px rgba(198, 40, 40, 0.18);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .adm-dot,
+  #play.rec.on {
+    animation: none;
+  }
+}

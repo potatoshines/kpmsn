@@ -8,16 +8,16 @@ Industry Partner: Kaiser Permanente
 
 A prototype call-support dashboard for health-plan customer-service representatives, paired with a one-way follow-up message for members. A representative looks up a member, follows a call transcript as it plays, reviews suggested resources, and sends only the items they approve to the member.
 
-> **Prototype.** All members, records, billing and transcripts are fictional, and call analysis uses a tagging agent (Gemini on Cloud Run) when configured, or simulated keyword rules otherwise. Not affiliated with or connected to Kaiser Permanente or any live system.
+> **Prototype.** All members, records, billing and transcripts are fictional, and call analysis uses an AI tagging agent (Gemini on Cloud Run). The public site only replays recorded agent runs; live agent calls need an admin code. Not affiliated with or connected to Kaiser Permanente or any live system.
 
 ## Features
 
 - Member lookup by ID, name or date of birth, with one-click sample members
-- Simulated real-time transcript playback with keyword highlighting
-- **AI tagging agent.** Each member line is sent to a Gemini agent (Cloud Run service in `agent/`) that returns tags from the catalog's closed tag list, each with the member's words as evidence. A regular matcher then turns tags into catalog resources, so the agent never sees the catalog and never decides eligibility
-- **Tagger status line** under the transcript says which tagger produced the cards: "Gemini agent", "simulated keyword rules" (no agent configured), or "agent unavailable for some lines" (a call failed or timed out and the keyword rules covered it)
-- **Privacy and safety around the agent:** the member's name, ID, phone, date of birth and address are redacted before any text leaves the browser; only Member lines are sent; profile tags (balance, social needs, conditions) are computed locally and never sent; calls fall back to the keyword rules on any failure, are cached per page load, and are capped per page load
-- Detected concerns and recorded history in a shared layout
+- **One public control: Recording.** Visitors press **Recording** to simulate a call. It replays a recorded run of the real AI agent (a saved file, see below), shows a **Simulating a call** badge while it plays, and sends nothing anywhere, so it costs nothing and cannot be abused. Member search only finds the three fictional members
+- **Admin console** (the 🔒 Admin button): unlock with an admin code that the server checks. It reveals Step, Reset, the sample/upload controls and a run-mode switch: **Recorded replay** (free) or **Live agent** (costs credits). It shows an agent-call meter and a **Save this run** button, and it locks itself if the server stops accepting the code
+- **AI tagging agent.** In Live agent mode each Member line is sent to a Gemini agent (Cloud Run service in `agent/`) that returns tags from the catalog's closed tag list, each with the member's words as evidence. A regular matcher turns tags into catalog resources, so the agent never sees the catalog and never decides eligibility
+- **Tagger status line** under the transcript says what produced the cards: "recorded agent run (model, date)", "Gemini agent", "simulated keyword rules", or why the keyword rules covered for the agent (call failed, code refused, limit reached)
+- **Privacy and safety:** the member's name, ID, phone, date of birth and address are redacted before any text leaves the browser; only Member lines are sent; profile tags (balance, social needs, conditions) are computed locally and never sent; calls fall back to the keyword rules on any failure, are cached, and are capped per page load and per day on the server
 - Resource suggestions in their own section under the concerns, each tagged **Call transcript** or **Member profile** (or both). Cards show the catalog's resource name, description, eligibility, program link and region; empty optional fields are left out, and a missing name or link is flagged
 - Member summary with a “More details” directory that jumps to sections of the member profile
 - Source filter on the suggestions (All, Call transcript, Member profile) with counts
@@ -44,8 +44,11 @@ src/app.js              State, rendering and event handling
 src/card.js             Suggestion card rendering (optional fields, flags, escaping)
 src/data/kp_resource_opportunity_catalog.csv   Resource catalog (source of truth for resources)
 src/data/catalog.js     Loads and validates the catalog; matches tags to resources
-src/agent-client.js     Calls the tagging agent, redacts identifiers, falls back to keyword rules
-src/config.js           Agent URL and limits (empty URL = keyword rules only)
+src/agent-client.js     Calls the tagging agent with the admin code, redacts identifiers, falls back to keyword rules
+src/admin.js            Admin console: server-checked unlock, run mode, call meter, save run
+src/recorded.js         Recorded-run file format, validation, loading
+src/data/recorded/      Recorded agent runs, one file per member (created from the admin console)
+src/config.js           Agent URL and limits (no secret; empty URL = keyword rules only)
 src/data/tag-rules.js   Keyword tagger: fallback for transcript lines, and the profile tags
 src/data/members.js     Mock members, transcripts and scenarios
 agent/                  Tagging service (FastAPI on Cloud Run) and the Python profile curator
@@ -59,22 +62,43 @@ docs/ARCHITECTURE.md    Data flow and extension points
 
 - **Add or change a resource:** edit `src/data/kp_resource_opportunity_catalog.csv`. Columns: `resource_id`, `resource_name`, `description`, `matching_tags`, `eligibility_description`, `resource_url`, `region`. `resource_name` and `resource_url` are required (a card with either missing is flagged and cannot be added to a follow-up); `description`, `eligibility_description` and `region` may be empty. Tags in `matching_tags` are what the tagging agent's tags are matched against.
 - **Add a member or call:** add an object to `M` in `src/data/members.js`, with its transcript in `tr`, care gaps in `cg`, any social-needs result in `sn`, and a line in `SC`.
-- **Turn on the tagging agent:** deploy `agent/` to Cloud Run, then set `url` and `secret` in `src/config.js`. See `docs/ARCHITECTURE.md`. The replies in `ans()` in `src/app.js` are still scripted.
+- **Turn on the tagging agent:** deploy `agent/` to Cloud Run, then set `url` in `src/config.js`. See `docs/ARCHITECTURE.md`. The replies in `ans()` in `src/app.js` are still scripted.
 
 ## Deploying
 
 Push to `main` and enable Pages (Settings, Pages, Source: GitHub Actions). `.github/workflows/pages.yml` publishes the site.
 
-## Tagging agent: setup and cost
+## Tagging agent: setup, access and cost
 
-- **Deploy:** the service is `agent/main.py` (`gcloud run deploy tag-agent --source agent ...`), using a Gemini Flash-Lite model through the Google Gen AI SDK on Google Cloud, with scale-to-zero and a 2-instance cap. Env vars: `GOOGLE_GENAI_USE_ENTERPRISE`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION=global`, `MODEL`, `APP_SECRET`, `ALLOWED_ORIGINS`. Run `python3 agent/make_vocab.py` and redeploy whenever the CSV's tags change. `pytest agent/test_main.py` tests the service with a stubbed model.
-- **Connect the site:** set `url` and `secret` in `src/config.js`. Leave `url` empty to run on keyword rules only (a fresh clone and the tests do this).
-- **What costs money:** serving the site is free (GitHub Pages). Only agent calls cost, roughly a fraction of a cent each, one per Member line. Anyone who can reach the page can currently trigger them, and the secret in `config.js` is public, so it only deters casual traffic. The page-load call cap is client-side and can be bypassed. Billing budget alerts only email; they do not stop spending.
-- **Demo data only:** the agent path must only ever receive fictional data. Real member data would need private endpoints, authentication and a compliance review.
+**Who can spend money.** Serving the site is free (GitHub Pages). Only live agent calls cost, roughly a fraction of a cent each (one per Member line). The public site never makes them: **Recording** replays a saved run. Live calls need the admin code, which the **service** checks on every request (`ADMIN_CODE`); the code is not in this repo or the website. A service with no `ADMIN_CODE` refuses everything.
+
+**Layers of protection**, strongest first: the Cloud Run max-instances setting and the Google Cloud budget and quotas (hard limits); the admin code, with a lockout after repeated wrong codes; `DAILY_LIMIT` calls per UTC day, per running instance; and a per-page-load call cap in the browser. The in-memory counters reset when an instance restarts (it scales to zero when idle), so treat them as a second layer. Budget alerts only email; they do not stop spending.
+
+**Deploy** (Cloud Shell, from the `agent/` folder; `openssl rand -hex 24` makes a good code, and avoid commas in it):
+
+```bash
+gcloud run deploy tag-agent --source . --region us-central1 \
+  --service-account tag-agent@YOUR_PROJECT.iam.gserviceaccount.com \
+  --min-instances 0 --max-instances 1 --concurrency 4 --timeout 60 --allow-unauthenticated \
+  --set-env-vars GOOGLE_GENAI_USE_ENTERPRISE=true,GOOGLE_CLOUD_PROJECT=YOUR_PROJECT,GOOGLE_CLOUD_LOCATION=global,MODEL=gemini-3.5-flash-lite,ADMIN_CODE=YOUR_CODE,DAILY_LIMIT=300,ALLOWED_ORIGINS=https://potatoshines.github.io
+```
+
+`--allow-unauthenticated` only lets the browser reach the service; every endpoint that costs money still needs the admin code. To change the code later: `gcloud run services update tag-agent --region us-central1 --update-env-vars ADMIN_CODE=NEW_CODE`. To test from localhost, add `http://localhost:5173` to `ALLOWED_ORIGINS` (use `^@^ALLOWED_ORIGINS=a,b` syntax for a comma list). Run `python3 agent/make_vocab.py` and redeploy whenever the CSV's tags change. `pytest agent` tests the service with a stubbed model.
+
+**Recording a run** (this is the only way new data reaches the public site):
+
+1. Open the site, click **🔒 Admin**, enter the code, choose **Live agent**.
+2. Look up a member and press **Play (live agent)**; let the whole call finish. Every Member line must be tagged by the agent itself, not the fallback rules.
+3. Click **Save this run**. It downloads `KP-xxxxxx.json`. Put it in `src/data/recorded/` and commit it.
+
+A recorded file is `{ version: 1, member, recordedAt, model, transcript: [["Rep"|"Member", text], ...], tags: { "<line number of each Member line>": [tags] } }`. Cards are recomputed from the tags and the current catalog, so catalog edits show up without re-recording. A missing, malformed or mismatched file shows a clear message instead of cards. Until a member has a recorded run, the public button says so.
+
+**Demo data only:** the agent path must only ever receive fictional data. Real member data would need private endpoints, real authentication and a compliance review.
 
 ## Known limitations
 
-- The tagging agent is callable by any visitor (see above). Planned: a public simulated call that replays recorded agent output, with live agent calls, transcript upload and speech-to-text behind a server-checked admin code.
+- Planned next, behind the admin code: transcript upload and editing with validation (plain `Rep:`/`Member:` lines, test transcripts as files in the repo), then speech-to-text with a Rep/Member speaker toggle.
+- The admin console hides controls in the page; the real gate is the server checking the code on every `/tag` call.
 
 - `app.js` is a single module; splitting it into transcript, assistant, profile and chat modules is the natural next refactor.
 - `theme.css` is a layer of overrides on `base.css` and could be consolidated into one stylesheet.
