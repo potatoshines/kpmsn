@@ -28,7 +28,7 @@
       <nav aria-label="Pages">
         <button data-v="ws" aria-current="page">Representative workspace</button
         ><button data-v="pf">Member profile</button
-        ><button data-v="mb">Member follow-up chat</button>
+        ><button data-v="mb">Member follow-up message</button>
       </nav>
       <div
         class="notice"
@@ -70,6 +70,7 @@
             the same keyword rules (simulated).
           </p>
           <p class="err" id="ferr" role="alert"></p>
+          <p class="mut" id="agentst" role="status" aria-live="polite"></p>
           <div id="tr" aria-live="polite" tabindex="0">
             <span class="mut">No transcript yet. Look up a member, then press Play.</span>
           </div>
@@ -152,16 +153,14 @@
         <div class="pt">Follow-up</div>
         <p class="ps">What the representative shared after the call.</p>
         <div class="phone card">
-          <h2>Follow-up chat <span class="tag">Simulated text message</span></h2>
+          <h2>Follow-up message <span class="tag">Simulated text message</span></h2>
           <p class="mut">
-            This temporary chat only shows items your representative approved, and the assistant
-            forgets this member’s information and call transcript after about 3 hours.
+            A one-way message: it only shows items your representative approved, and members cannot
+            reply to it.
           </p>
           <div class="chat" id="mc" aria-live="polite">
             <p class="mut">No follow-up sent yet. Representatives send it from the workspace.</p>
           </div>
-          <p class="mut">Tap a question to ask about what was shared.</p>
-          <div class="row" id="mqs"></div>
         </div>
       </section>
     </main>
@@ -173,7 +172,7 @@
         </div>
         <p class="mut">Temporary preview. Nothing has been sent.</p>
         <div class="phone card">
-          <h2>Follow-up chat <span class="tag">Simulated text message</span></h2>
+          <h2>Follow-up message <span class="tag">Simulated text message</span></h2>
           <div class="chat" id="pvc"></div>
         </div>
       </div>
