@@ -38,17 +38,24 @@
       >
         Prototype · fictional data
       </div>
-      <button class="admbtn" id="admbtn" aria-expanded="false" aria-controls="adm">🔒 Admin</button>
     </header>
+    <button
+      class="admbtn"
+      id="admbtn"
+      aria-label="Admin"
+      title="Admin"
+      aria-expanded="false"
+      aria-controls="adm"
+    >
+      🔒
+    </button>
     <div id="adm" class="adm hide" role="region" aria-label="Admin console">
       <div class="adm-h">
-        <span class="adm-dot" aria-hidden="true"></span><b>ADMIN CONSOLE</b>
+        <b>Admin</b>
         <button class="adm-x" id="admclose" aria-label="Close admin console">✕</button>
       </div>
       <form id="admlock" class="adm-b">
-        <p class="adm-t">
-          Live agent calls cost credits. Enter the admin code to unlock the testing tools.
-        </p>
+        <p class="adm-t">Team testing tools. Live agent calls cost credits.</p>
         <label
           >Access code <input id="admcode" type="password" autocomplete="off" spellcheck="false"
         /></label>
