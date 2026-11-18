@@ -14,6 +14,9 @@ A prototype call-support dashboard for health-plan customer-service representati
 
 - Member lookup by ID, name or date of birth, with one-click sample members
 - Simulated real-time transcript playback with keyword highlighting
+- **AI tagging agent.** Each member line is sent to a Gemini agent (Cloud Run service in `agent/`) that returns tags from the catalog's closed tag list, each with the member's words as evidence. A regular matcher then turns tags into catalog resources, so the agent never sees the catalog and never decides eligibility
+- **Tagger status line** under the transcript says which tagger produced the cards: "Gemini agent", "simulated keyword rules" (no agent configured), or "agent unavailable for some lines" (a call failed or timed out and the keyword rules covered it)
+- **Privacy and safety around the agent:** the member's name, ID, phone, date of birth and address are redacted before any text leaves the browser; only Member lines are sent; profile tags (balance, social needs, conditions) are computed locally and never sent; calls fall back to the keyword rules on any failure, are cached per page load, and are capped per page load
 - Detected concerns and recorded history in a shared layout
 - Resource suggestions in their own section under the concerns, each tagged **Call transcript** or **Member profile** (or both). Cards show the catalog's resource name, description, eligibility, program link and region; empty optional fields are left out, and a missing name or link is flagged
 - Member summary with a “More details” directory that jumps to sections of the member profile
@@ -31,7 +34,7 @@ No build step. The app uses ES modules, so serve it over HTTP:
 npm start          # or: python3 -m http.server 5173
 ```
 
-Then open http://localhost:5173. Run `npm install && npm run format` to format with Prettier, and `node --test` to run the tests. The resource catalog is loaded from a CSV file, so opening `index.html` directly from disk will not work.
+Then open http://localhost:5173. Run `npm install && npm run format` to format with Prettier, `node --test` for the site tests, and `pytest agent` for the agent service tests (needs `pip install -r agent/requirements.txt pytest`). To test against the deployed agent from localhost, add `http://localhost:5173` to the service's `ALLOWED_ORIGINS`. The resource catalog is loaded from a CSV file, so opening `index.html` directly from disk will not work.
 
 ## Project structure
 
@@ -45,6 +48,7 @@ src/agent-client.js     Calls the tagging agent, redacts identifiers, falls back
 src/config.js           Agent URL and limits (empty URL = keyword rules only)
 src/data/tag-rules.js   Keyword tagger: fallback for transcript lines, and the profile tags
 src/data/members.js     Mock members, transcripts and scenarios
+agent/                  Tagging service (FastAPI on Cloud Run) and the Python profile curator
 tests/                  Catalog, card and tag-rule tests (node --test)
 src/styles/base.css     Tokens, layout skeleton, core components
 src/styles/theme.css    Visual theme layer (loaded after base)
@@ -61,7 +65,16 @@ docs/ARCHITECTURE.md    Data flow and extension points
 
 Push to `main` and enable Pages (Settings, Pages, Source: GitHub Actions). `.github/workflows/pages.yml` publishes the site.
 
+## Tagging agent: setup and cost
+
+- **Deploy:** the service is `agent/main.py` (`gcloud run deploy tag-agent --source agent ...`), using a Gemini Flash-Lite model through the Google Gen AI SDK on Google Cloud, with scale-to-zero and a 2-instance cap. Env vars: `GOOGLE_GENAI_USE_ENTERPRISE`, `GOOGLE_CLOUD_PROJECT`, `GOOGLE_CLOUD_LOCATION=global`, `MODEL`, `APP_SECRET`, `ALLOWED_ORIGINS`. Run `python3 agent/make_vocab.py` and redeploy whenever the CSV's tags change. `pytest agent/test_main.py` tests the service with a stubbed model.
+- **Connect the site:** set `url` and `secret` in `src/config.js`. Leave `url` empty to run on keyword rules only (a fresh clone and the tests do this).
+- **What costs money:** serving the site is free (GitHub Pages). Only agent calls cost, roughly a fraction of a cent each, one per Member line. Anyone who can reach the page can currently trigger them, and the secret in `config.js` is public, so it only deters casual traffic. The page-load call cap is client-side and can be bypassed. Billing budget alerts only email; they do not stop spending.
+- **Demo data only:** the agent path must only ever receive fictional data. Real member data would need private endpoints, authentication and a compliance review.
+
 ## Known limitations
+
+- The tagging agent is callable by any visitor (see above). Planned: a public simulated call that replays recorded agent output, with live agent calls, transcript upload and speech-to-text behind a server-checked admin code.
 
 - `app.js` is a single module; splitting it into transcript, assistant, profile and chat modules is the natural next refactor.
 - `theme.css` is a layer of overrides on `base.css` and could be consolidated into one stylesheet.
